@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getMyBookings, cancelBooking } from "../services/bookingService";
 import "../styles/MyBookings.css";
 
 const MyBookings = () => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,14 +34,42 @@ const MyBookings = () => {
     }
   };
 
+  const handleWriteReview = (playroomId) => {
+    // Navigira na stranicu igraonice i skroluje do recenzija
+    navigate(`/playrooms/${playroomId}#reviews`);
+    // Mali delay da se stranica učita pa skrol
+    setTimeout(() => {
+      const element = document.getElementById("reviews-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 500);
+  };
+
   const getStatusText = (status) => {
     const statusMap = {
-      cekiranje: { text: "Čeka potvrdu", class: "status-pending" },
-      potvrdjeno: { text: "Potvrđeno", class: "status-confirmed" },
-      otkazano: { text: "Otkazano", class: "status-cancelled" },
-      zavrseno: { text: "Završeno", class: "status-completed" },
+      cekiranje: {
+        text: "⏳ Čeka potvrdu",
+        class: "status-pending",
+        clickable: false,
+      },
+      potvrdjeno: {
+        text: "✅ Potvrđeno",
+        class: "status-confirmed",
+        clickable: false,
+      },
+      otkazano: {
+        text: "❌ Otkazano",
+        class: "status-cancelled",
+        clickable: false,
+      },
+      zavrseno: {
+        text: "🎉 Završeno - Klikni da ostaviš recenziju",
+        class: "status-completed",
+        clickable: true,
+      },
     };
-    return statusMap[status] || { text: status, class: "" };
+    return statusMap[status] || { text: status, class: "", clickable: false };
   };
 
   if (loading) {
@@ -48,14 +78,14 @@ const MyBookings = () => {
 
   return (
     <div className="container my-bookings-page">
-      <h1>Moje rezervacije</h1>
+      <h1>📋 Moje rezervacije</h1>
 
       {bookings.length === 0 ? (
         <div className="empty-state">
           <p>Još nemate nijednu rezervaciju.</p>
           <button
             className="btn-primary"
-            onClick={() => (window.location.href = "/playrooms")}
+            onClick={() => navigate("/playrooms")}
           >
             Pogledaj igraonice
           </button>
@@ -69,7 +99,20 @@ const MyBookings = () => {
               <div key={booking._id} className="booking-card">
                 <div className="booking-header">
                   <h3>{booking.playroomId?.naziv}</h3>
-                  <span className={`status-badge ${status.class}`}>
+                  <span
+                    className={`status-badge ${status.class} ${status.clickable ? "clickable" : ""}`}
+                    onClick={() =>
+                      status.clickable &&
+                      handleWriteReview(
+                        booking.playroomId?._id || booking.playroomId,
+                      )
+                    }
+                    style={
+                      status.clickable
+                        ? { cursor: "pointer", textDecoration: "underline" }
+                        : {}
+                    }
+                  >
                     {status.text}
                   </span>
                 </div>
@@ -77,18 +120,14 @@ const MyBookings = () => {
                   <p>
                     📍 {booking.playroomId?.adresa}, {booking.playroomId?.grad}
                   </p>
-                  {slot && (
-                    <>
-                      <p>
-                        📅 Datum:{" "}
-                        {new Date(slot.datum).toLocaleDateString("sr-RS")}
-                      </p>
-                      <p>
-                        ⏰ Vreme: {slot.vremeOd} - {slot.vremeDo}
-                      </p>
-                    </>
-                  )}
-                  <p>👶 Broj dece: {booking.brojDece}</p>
+                  <p>
+                    📅 Datum:{" "}
+                    {new Date(booking.datum).toLocaleDateString("sr-RS")}
+                  </p>
+                  <p>
+                    ⏰ Vreme: {booking.vremeOd} - {booking.vremeDo}
+                  </p>
+                  <p>👶 Broj dece: {booking.brojDece || 1}</p>
                   <p>💰 Ukupno: {booking.ukupnaCena} RSD</p>
                   {booking.napomena && <p>📝 Napomena: {booking.napomena}</p>}
                 </div>

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPlayroomById } from "../services/playroomService";
 import { useAuth } from "../context/AuthContext";
 import "../styles/PlayroomDetails.css";
 import ImageGallery from "../components/ImageGallery";
+import Reviews from "../components/Reviews";
 
 const PlayroomDetails = () => {
   const { id } = useParams();
@@ -11,10 +12,24 @@ const PlayroomDetails = () => {
   const navigate = useNavigate();
   const [playroom, setPlayroom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const reviewsRef = useRef(null);
 
   useEffect(() => {
     loadPlayroom();
   }, [id]);
+
+  useEffect(() => {
+    // Proveri da li URL ima #reviews hash
+    if (window.location.hash === "#reviews" && playroom) {
+      setTimeout(() => {
+        const element = document.getElementById("reviews-section");
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 500);
+    }
+  }, [playroom]);
 
   const loadPlayroom = async () => {
     setLoading(true);
@@ -69,7 +84,30 @@ const PlayroomDetails = () => {
         />
         <div className="details-header">
           <h1>{playroom.naziv}</h1>
-          <div className="rating">⭐ 5.0</div>
+          <div className="playroom-rating-large">
+            <div className="stars-large">
+              {"★".repeat(Math.floor(playroom.rating || 0))}
+              {"☆".repeat(5 - Math.floor(playroom.rating || 0))}
+            </div>
+            <span className="rating-number-large">
+              {playroom.rating?.toFixed(1) || 0}
+            </span>
+            <span
+              className="review-count-link-large"
+              onClick={() =>
+                document
+                  .getElementById("reviews-section")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              style={{
+                cursor: "pointer",
+                color: "#2196f3",
+                textDecoration: "underline",
+              }}
+            >
+              ({playroom.reviewCount || 0} recenzija)
+            </span>
+          </div>
         </div>
 
         <div className="details-location">
@@ -93,27 +131,11 @@ const PlayroomDetails = () => {
           <p>{playroom.opis}</p>
         </div>
 
+        {/* Dugme za cenovnik */}
         <div className="details-price">
-          <h3>Cenovnik</h3>
-          <div className="price-list">
-            <div className="price-item">
-              <span>Osnovna cena:</span>
-              <strong>{playroom.cenovnik?.osnovni} RSD</strong>
-              <span>/ po detetu</span>
-            </div>
-            {playroom.cenovnik?.produzeno && (
-              <div className="price-item">
-                <span>Produženo:</span>
-                <strong>{playroom.cenovnik.produzeno} RSD</strong>
-              </div>
-            )}
-            {playroom.cenovnik?.vikend && (
-              <div className="price-item">
-                <span>Vikend:</span>
-                <strong>{playroom.cenovnik.vikend} RSD</strong>
-              </div>
-            )}
-          </div>
+          <button className="btn-price" onClick={() => setShowPriceModal(true)}>
+            💰 Pogledaj cenovnik
+          </button>
         </div>
 
         <div className="details-features">
@@ -156,6 +178,105 @@ const PlayroomDetails = () => {
           Rezerviši termin
         </button>
       </div>
+
+      {/* Modal za cenovnik */}
+      {showPriceModal && (
+        <div className="price-modal" onClick={() => setShowPriceModal(false)}>
+          <div
+            className="price-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="price-modal-header">
+              <h2>Cenovnik - {playroom.naziv}</h2>
+              <button
+                className="price-modal-close"
+                onClick={() => setShowPriceModal(false)}
+              >
+                ✖
+              </button>
+            </div>
+            <div className="price-modal-body">
+              {/* Osnovne cene */}
+              <div className="price-group">
+                <h3>🎟️ Ulaznice</h3>
+                <div className="price-item">
+                  <span>Cena po detetu:</span>
+                  <strong>{playroom.cenovnik?.osnovni} RSD</strong>
+                </div>
+                {playroom.cenovnik?.poRoditelju > 0 && (
+                  <div className="price-item">
+                    <span>Cena po roditelju (pratilac):</span>
+                    <strong>{playroom.cenovnik.poRoditelju} RSD</strong>
+                  </div>
+                )}
+                {playroom.cenovnik?.produzeno > 0 && (
+                  <div className="price-item">
+                    <span>Produženo vreme (po satu):</span>
+                    <strong>{playroom.cenovnik.produzeno} RSD</strong>
+                  </div>
+                )}
+                {playroom.cenovnik?.vikend > 0 && (
+                  <div className="price-item">
+                    <span>Vikend cena:</span>
+                    <strong>{playroom.cenovnik.vikend} RSD</strong>
+                  </div>
+                )}
+              </div>
+
+              {/* Fiksni paketi */}
+              {playroom.cenovnik?.fiksniPaketi?.length > 0 && (
+                <div className="price-group">
+                  <h3>🎁 Fiksni paketi</h3>
+                  {playroom.cenovnik.fiksniPaketi.map((paket, idx) => (
+                    <div key={idx} className="price-item">
+                      <span>{paket.naziv}:</span>
+                      <strong>{paket.cena} RSD</strong>
+                      {paket.opis && (
+                        <span className="price-desc">({paket.opis})</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Opcione pogodnosti */}
+              {playroom.opcije?.length > 0 && (
+                <div className="price-group">
+                  <h3>🎪 Dodatne pogodnosti (opciono)</h3>
+                  {playroom.opcije.map((opcija, idx) => (
+                    <div key={idx} className="price-item">
+                      <span>{opcija.naziv}:</span>
+                      <strong>{opcija.cena} RSD</strong>
+                      {opcija.tip === "po_osobi" && (
+                        <span className="price-type">(po osobi)</span>
+                      )}
+                      {opcija.opis && (
+                        <span className="price-desc">({opcija.opis})</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Besplatne pogodnosti */}
+              {playroom.pogodnosti?.length > 0 && (
+                <div className="price-group">
+                  <h3>✨ Besplatne pogodnosti</h3>
+                  <div className="free-features">
+                    {playroom.pogodnosti.map((feat, idx) => (
+                      <span key={idx} className="free-feature">
+                        ✓ {feat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Reviews playroomId={playroom._id} />
     </div>
   );
 };

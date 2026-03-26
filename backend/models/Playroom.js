@@ -46,22 +46,61 @@ const PlayroomSchema = new mongoose.Schema({
       type: Number,
       required: [true, "Osnovna cena je obavezna"],
     },
-    produzeno: Number,
-    vikend: Number,
+    poRoditelju: {
+      type: Number,
+      default: 0,
+    },
+    produzeno: {
+      type: Number,
+      default: 0,
+    },
+    vikend: {
+      type: Number,
+      default: 0,
+    },
+    fiksniPaketi: [
+      {
+        naziv: {
+          type: String,
+          required: true,
+        },
+        cena: {
+          type: Number,
+          required: true,
+        },
+        opis: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
   },
   pogodnosti: [
     {
       type: String,
-      enum: [
-        "kafic",
-        "animatori",
-        "parking",
-        "wifi",
-        "kliziste",
-        "trampoline",
-        "rođendani",
-        "hrana",
-      ],
+      trim: true,
+    },
+  ],
+  opcije: [
+    {
+      naziv: {
+        type: String,
+        required: true,
+      },
+      cena: {
+        type: Number,
+        required: true,
+        default: 0,
+      },
+      opis: {
+        type: String,
+        default: "",
+      },
+      tip: {
+        type: String,
+        enum: ["po_osobi", "fiksno"],
+        default: "po_osobi",
+      },
     },
   ],
   slike: [
@@ -94,6 +133,14 @@ const PlayroomSchema = new mongoose.Schema({
   verifikovan: {
     type: Boolean,
     default: false,
+  },
+  rating: {
+    type: Number,
+    default: 0,
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
   },
   kapacitet: {
     type: Number,

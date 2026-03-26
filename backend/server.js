@@ -24,6 +24,7 @@ app.use("/api/timeslots", require("./routes/timeSlotRoutes"));
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/upload", require("./routes/uploadRoutes"));
+app.use("/api/reviews", require("./routes/reviewRoutes"));
 
 // Test ruta
 app.get("/", (req, res) => {
@@ -31,6 +32,11 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+// Pokreni cron job za završavanje termina
+if (process.env.NODE_ENV !== "test") {
+  require("./jobs/completeBookings");
+}
 
 app.listen(PORT, () => {
   console.log(`Server pokrenut na portu ${PORT}`);

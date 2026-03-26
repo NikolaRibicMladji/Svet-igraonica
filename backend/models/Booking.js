@@ -40,6 +40,14 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  timeSlotId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "TimeSlot",
+  },
+  vremeDo: {
+    type: String,
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

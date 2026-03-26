@@ -305,6 +305,50 @@
   box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
 
+.playroom-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.playroom-rating .stars {
+  color: #ffb800;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.rating-number {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.review-count-link {
+  color: #2196f3;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.review-count-link:hover {
+  color: #0b7dda;
+  text-decoration: underline;
+}
+
+.results-count {
+  margin: 20px 0;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.results-count strong {
+  color: #ff6b4a;
+  font-size: 1.1rem;
+}
+
 /* ============================================
    EMPTY STATE
 ============================================ */

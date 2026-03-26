@@ -18,6 +18,7 @@ const Book = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [selectedOptions, setSelectedOptions] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split("T")[0];
@@ -43,6 +44,20 @@ const Book = () => {
       setPlayroom(result.data);
     }
   };
+
+  const toggleOption = (opcija) => {
+    setSelectedOptions((prev) => {
+      if (prev.find((o) => o.naziv === opcija.naziv)) {
+        return prev.filter((o) => o.naziv !== opcija.naziv);
+      } else {
+        return [...prev, opcija];
+      }
+    });
+  };
+
+  const ukupnaCena =
+    (selectedSlot?.cena || 0) * brojDece +
+    selectedOptions.reduce((sum, opt) => sum + opt.cena, 0);
 
   const loadTimeSlots = async () => {
     setLoading(true);
@@ -73,6 +88,7 @@ const Book = () => {
       vremeDo: selectedSlot.vremeDo,
       brojDece,
       napomena,
+      selectedOptions: selectedOptions.map((opt) => opt.naziv), // prosledi izabrane opcije
     });
 
     if (result.success) {
@@ -99,6 +115,7 @@ const Book = () => {
     }
     return { text: "SLOBODNO", class: "slot-free", disabled: false };
   };
+
   if (!playroom) {
     return <div className="container loading">Učitavanje...</div>;
   }
@@ -215,6 +232,33 @@ const Book = () => {
               />
             </div>
 
+            {/* OPCIONE POGODNOSTI */}
+            {playroom.opcije && playroom.opcije.length > 0 && (
+              <div className="options-section">
+                <h4>🎪 Dodatne pogodnosti (opciono)</h4>
+                <div className="options-grid">
+                  {playroom.opcije.map((opcija, index) => (
+                    <div key={index} className="option-card">
+                      <label className="option-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedOptions.some(
+                            (o) => o.naziv === opcija.naziv,
+                          )}
+                          onChange={() => toggleOption(opcija)}
+                        />
+                        <span className="option-name">{opcija.naziv}</span>
+                        <span className="option-price">+{opcija.cena} RSD</span>
+                      </label>
+                      {opcija.opis && (
+                        <p className="option-desc">{opcija.opis}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="form-group">
               <label>📝 Napomena (opciono)</label>
               <textarea
@@ -235,11 +279,21 @@ const Book = () => {
                 <span>Cena po detetu:</span>
                 <strong>{selectedSlot.cena} RSD</strong>
               </div>
+              {selectedOptions.length > 0 && (
+                <div className="summary-row options-summary">
+                  <span>Dodatne pogodnosti:</span>
+                  <div className="options-total">
+                    {selectedOptions.map((opt, idx) => (
+                      <div key={idx} className="option-line">
+                        {opt.naziv}: +{opt.cena} RSD
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="summary-total">
                 <span>Ukupno za plaćanje:</span>
-                <strong className="total-amount">
-                  {brojDece * selectedSlot.cena} RSD
-                </strong>
+                <strong className="total-amount">{ukupnaCena} RSD</strong>
               </div>
             </div>
 

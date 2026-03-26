@@ -1,0 +1,351 @@
+.form-section {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.form-section h3 {
+  margin-bottom: 20px;
+  color: #ff6b4a;
+  font-size: 1.2rem;
+}
+
+.section-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+/* Pogodnosti dinamički unos */
+.pogodnosti-input {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.add-pogodnost {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pogodnost-input-field {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.btn-add-pogodnost {
+  background: #ff6b4a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-add-pogodnost:hover {
+  background: #e85a3a;
+  transform: translateY(-1px);
+}
+
+.pogodnosti-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pogodnost-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.pogodnost-name {
+  flex: 2;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.pogodnost-cena {
+  flex: 1;
+}
+
+.pogodnost-price-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.remove-pogodnost {
+  background: none;
+  border: none;
+  color: #f44336;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.2s;
+}
+
+.remove-pogodnost:hover {
+  color: #d32f2f;
+  transform: scale(1.1);
+}
+
+/* Radno vreme */
+.radno-vreme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef2f6;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dan-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.dan-checkbox input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.dan-naziv {
+  font-weight: 500;
+  color: #334155;
+}
+
+.vreme-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-input {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.time-separator {
+  color: #94a3b8;
+}
+
+.form-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.btn-cancel {
+  flex: 1;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #cbd5e1;
+}
+
+.btn-submit {
+  flex: 2;
+  background: linear-gradient(135deg, #ff6b4a, #ff8c6e);
+  color: white;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.3);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* Opcione pogodnosti */
+.opcije-input {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.add-opcija {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.opcija-input-field {
+  flex: 2;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.opcija-price-field {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.btn-add-opcija {
+  background: #ff6b4a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-add-opcija:hover {
+  background: #e85a3a;
+}
+
+.opcija-opis {
+  margin-bottom: 20px;
+}
+
+.opcija-desc-field {
+  width: 100%;
+  padding: 10px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.opcije-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.opcija-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.opcija-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.opcija-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.opcija-price {
+  color: #ff6b4a;
+  font-weight: 600;
+}
+
+.opcija-desc {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.remove-opcija {
+  background: none;
+  border: none;
+  color: #f44336;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.2s;
+}
+
+.remove-opcija:hover {
+  color: #d32f2f;
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .radno-vreme-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vreme-inputs {
+    width: 100%;
+  }
+
+  .time-input {
+    flex: 1;
+  }
+
+  .add-pogodnost {
+    flex-direction: column;
+  }
+
+  .pogodnost-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+  .add-opcija {
+    flex-direction: column;
+  }
+
+  .opcija-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .opcija-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .remove-opcija {
+    align-self: flex-end;
+  }
+}

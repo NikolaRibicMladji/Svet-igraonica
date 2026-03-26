@@ -81,6 +81,26 @@
   background-color: #da190b;
 }
 
+.status-badge.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-badge.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  background-color: #e3f2fd;
+}
+
+.status-completed {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-completed.clickable:hover {
+  background-color: #c8e6c9;
+}
+
 @media (max-width: 480px) {
   .my-bookings-page {
     padding: 20px 0;

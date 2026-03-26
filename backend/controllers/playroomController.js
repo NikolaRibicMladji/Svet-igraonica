@@ -33,17 +33,50 @@ exports.createPlayroom = async (req, res) => {
   }
 };
 
-// @desc    Dohvati sve verifikovane igraonice (javno)
+// @desc    Dohvati sve verifikovane igraonice (sa filtriranjem)
 // @route   GET /api/playrooms
 // @access  Public
 exports.getAllPlayrooms = async (req, res) => {
   try {
-    const playrooms = await Playroom.find({
-      verifikovan: true,
-      status: "aktivan",
-    })
-      .select("-__v")
-      .sort({ createdAt: -1 });
+    const { grad, minCena, maxCena, pogodnosti, minRating, sortBy } = req.query;
+
+    // Osnovni filter - samo verifikovane i aktivne igraonice
+    let query = { verifikovan: true, status: "aktivan" };
+
+    // Filter po gradu
+    if (grad && grad !== "svi") {
+      query.grad = grad;
+    }
+
+    // Filter po ceni
+    if (minCena || maxCena) {
+      query["cenovnik.osnovni"] = {};
+      if (minCena) query["cenovnik.osnovni"].$gte = parseInt(minCena);
+      if (maxCena) query["cenovnik.osnovni"].$lte = parseInt(maxCena);
+    }
+
+    // Filter po oceni
+    if (minRating && minRating !== "sve") {
+      query.rating = { $gte: parseInt(minRating) };
+    }
+
+    // Filter po pogodnostima
+    if (pogodnosti) {
+      const pogodnostiArray = pogodnosti.split(",");
+      query.pogodnosti = { $in: pogodnostiArray };
+    }
+
+    // Sortiranje
+    let sort = { createdAt: -1 }; // default: najnovije prvo
+    if (sortBy === "rating") {
+      sort = { rating: -1 };
+    } else if (sortBy === "price_asc") {
+      sort = { "cenovnik.osnovni": 1 };
+    } else if (sortBy === "price_desc") {
+      sort = { "cenovnik.osnovni": -1 };
+    }
+
+    const playrooms = await Playroom.find(query).select("-__v").sort(sort);
 
     res.status(200).json({
       success: true,
