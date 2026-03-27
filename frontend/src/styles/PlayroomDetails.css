@@ -1,5 +1,11 @@
+/* ============================================
+   PLAYROOM DETAILS - UNAPREĐENI STILOVI
+============================================ */
+
 .playroom-details {
   padding: 40px 0;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .btn-back {
@@ -10,168 +16,143 @@
   cursor: pointer;
   margin-bottom: 20px;
   padding: 0;
+  transition: color 0.2s;
 }
 
 .btn-back:hover {
   text-decoration: underline;
+  color: #0b7dda;
 }
 
 .details-card {
   background: white;
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
+/* ============================================
+   PROFILNA SLIKA
+============================================ */
+.profile-image-container {
+  margin-bottom: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.profile-image-detail {
+  width: 600px;
+  max-width: 100%;
+  height: 450px;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid #f8fafc;
+}
+
+/* ============================================
+   GALERIJA SLIKA - MALE SLIČICE
+============================================ */
+.details-gallery {
+  margin: 24px 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.details-gallery h3 {
+  margin-bottom: 16px;
+  color: #ff6b4a;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 80px));
+  gap: 12px;
+  justify-content: start;
+  width: 100%;
+}
+
+.gallery-item {
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1f5f9;
+  width: 80px;
+  height: 80px;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ============================================
+   VIDEO
+============================================ */
+.details-video {
+  margin: 24px 0;
+}
+
+.details-video h3 {
+  margin-bottom: 16px;
+  color: #ff6b4a;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.video-player {
+  width: 100%;
+  max-height: 400px;
+  border-radius: 16px;
+  background: #000;
+}
+
+/* ============================================
+   HEADER I OCENA
+============================================ */
 .details-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .details-header h1 {
   margin: 0;
-  color: #333;
-}
-
-.rating {
-  background-color: #ff9800;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 14px;
-}
-
-.details-location {
-  color: #666;
-  margin-bottom: 20px;
-  font-size: 16px;
-}
-
-.details-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 25px;
-}
-
-.info-item {
-  color: #555;
-}
-
-.details-description h3,
-.details-price h3,
-.details-features h3,
-.details-working-hours h3 {
-  margin: 20px 0 15px;
-  color: #333;
-}
-
-.details-description p {
-  line-height: 1.6;
-  color: #666;
-}
-
-.price-list {
-  background-color: #f5f5f5;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-.price-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #ddd;
-}
-
-.price-item:last-child {
-  border-bottom: none;
-}
-
-.price-item span:first-child {
-  color: #666;
-}
-
-.price-item strong {
-  color: #4caf50;
-  font-size: 18px;
-}
-
-.features-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.feature-badge {
-  background-color: #e8f5e9;
-  color: #4caf50;
-  padding: 8px 15px;
-  border-radius: 20px;
-  font-size: 14px;
-}
-
-.hours-list {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-.hour-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.hour-item:last-child {
-  border-bottom: none;
-}
-
-.day {
-  font-weight: bold;
-  color: #333;
-}
-
-.btn-book-large {
-  width: 100%;
-  background-color: #ff9800;
-  color: white;
-  padding: 15px;
-  border: none;
-  border-radius: 10px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 30px;
-  transition: background-color 0.3s ease;
-}
-
-.btn-book-large:hover {
-  background-color: #e68900;
+  color: #1e293b;
+  font-size: 1.8rem;
 }
 
 .playroom-rating-large {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 10px 0;
+  flex-wrap: wrap;
 }
 
 .stars-large {
   color: #ffb800;
-  font-size: 20px;
-  letter-spacing: 3px;
+  font-size: 18px;
+  letter-spacing: 2px;
 }
 
 .rating-number-large {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1e293b;
 }
@@ -188,17 +169,78 @@
   text-decoration: underline;
 }
 
-/* Cenovnik modal */
+/* ============================================
+   LOKACIJA
+============================================ */
+.details-location {
+  color: #64748b;
+  margin-bottom: 20px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============================================
+   INFO GRID
+============================================ */
+.details-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  background-color: #f8fafc;
+  padding: 16px 20px;
+  border-radius: 16px;
+  margin-bottom: 25px;
+}
+
+.info-item {
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.info-item strong {
+  color: #1e293b;
+}
+
+/* ============================================
+   OPIS
+============================================ */
+.details-description {
+  margin: 20px 0;
+}
+
+.details-description h3,
+.details-price h3,
+.details-features h3,
+.details-working-hours h3,
+.details-gallery h3,
+.details-video h3 {
+  margin: 20px 0 12px;
+  color: #334155;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.details-description p {
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* ============================================
+   CENOVNIK
+============================================ */
 .btn-price {
   background: linear-gradient(135deg, #2196f3, #1976d2);
   color: white;
-  padding: 12px 24px;
+  padding: 10px 24px;
   border: none;
   border-radius: 40px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  margin: 20px 0;
+  margin: 16px 0;
+  display: inline-block;
 }
 
 .btn-price:hover {
@@ -206,6 +248,112 @@
   box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
+.price-list {
+  background-color: #f8fafc;
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.price-item:last-child {
+  border-bottom: none;
+}
+
+.price-item span:first-child {
+  color: #475569;
+}
+
+.price-item strong {
+  color: #ff6b4a;
+  font-size: 1rem;
+}
+
+/* ============================================
+   BESPLATNE POGODNOSTI
+============================================ */
+.features-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feature-badge {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.feature-badge.free-feature {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.no-features {
+  color: #94a3b8;
+  font-style: italic;
+  padding: 12px 0;
+}
+
+/* ============================================
+   RADNO VREME
+============================================ */
+.hours-list {
+  background-color: #f8fafc;
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.hour-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.hour-item:last-child {
+  border-bottom: none;
+}
+
+.day {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* ============================================
+   DUGME ZA REZERVACIJU
+============================================ */
+.btn-book-large {
+  width: 100%;
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  padding: 14px;
+  border: none;
+  border-radius: 40px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 30px;
+  transition: all 0.2s;
+}
+
+.btn-book-large:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+/* ============================================
+   MODAL ZA CENOVNIK
+============================================ */
 .price-modal {
   position: fixed;
   top: 0;
@@ -254,6 +402,11 @@
   font-size: 24px;
   cursor: pointer;
   color: white;
+  transition: transform 0.2s;
+}
+
+.price-modal-close:hover {
+  transform: scale(1.1);
 }
 
 .price-modal-body {
@@ -274,25 +427,7 @@
   margin-bottom: 12px;
   color: #ff6b4a;
   font-size: 1rem;
-}
-
-.price-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #f1f5f9;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.price-item span {
-  color: #475569;
-}
-
-.price-item strong {
-  color: #ff6b4a;
-  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .price-desc,
@@ -314,9 +449,12 @@
   color: #2e7d32;
   padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
+/* ============================================
+   ANIMACIJE
+============================================ */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -337,163 +475,106 @@
   }
 }
 
-/* RESPONZIVNOST - TABLETI */
+/* ============================================
+   RESPONZIVNOST
+============================================ */
 @media (max-width: 768px) {
+  .playroom-details {
+    padding: 24px 0;
+  }
+
   .details-card {
     padding: 20px;
   }
 
   .details-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+  }
+
+  .profile-image-detail {
+    width: 160px;
+    height: 120px;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 70px));
+    gap: 10px;
+  }
+
+  .gallery-item {
+    width: 70px;
+    height: 70px;
   }
 
   .details-info-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .features-list {
-    gap: 8px;
-  }
-
-  .feature-badge {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-  .price-modal-content {
-    width: 95%;
+    gap: 12px;
   }
 
   .price-item {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .feature-badge.free-feature {
-    background: #e8f5e9;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
+    gap: 4px;
   }
 
-  .no-features {
-    color: #94a3b8;
-    font-style: italic;
-    padding: 12px 0;
+  .hour-item {
+    flex-direction: column;
+    gap: 4px;
   }
 
-  .main-image-container {
-    margin-bottom: 20px;
-    border-radius: 20px;
-    overflow: hidden;
-    background: #f1f5f9;
-    aspect-ratio: 16 / 9;
-  }
-
-  .main-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .details-gallery {
-    margin: 30px 0;
-  }
-
-  .details-gallery h3 {
-    margin-bottom: 16px;
-    color: #ff6b4a;
-  }
-
-  .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-  }
-
-  .gallery-item {
-    cursor: pointer;
-    border-radius: 12px;
-    overflow: hidden;
-    aspect-ratio: 1 / 1;
-    background: #f1f5f9;
-  }
-
-  .gallery-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.2s;
-  }
-
-  .gallery-item:hover img {
-    transform: scale(1.05);
-  }
-
-  .details-video {
-    margin: 30px 0;
-  }
-
-  .details-video h3 {
-    margin-bottom: 16px;
-    color: #ff6b4a;
-  }
-
-  .video-player {
-    width: 100%;
-    max-height: 400px;
-    border-radius: 16px;
-    background: #000;
+  .price-modal-content {
+    width: 95%;
   }
 }
 
-/* RESPONZIVNOST - MOBILNI */
 @media (max-width: 480px) {
   .playroom-details {
-    padding: 20px 0;
+    padding: 16px 0;
   }
 
   .details-card {
-    padding: 15px;
+    padding: 16px;
   }
 
   .details-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
   }
 
   .details-header h1 {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
 
-  .rating {
-    font-size: 12px;
-    padding: 3px 8px;
+  .profile-image-detail {
+    width: 140px;
+    height: 100px;
   }
 
-  .details-location {
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 60px));
+    gap: 8px;
+  }
+
+  .gallery-item {
+    width: 60px;
+    height: 60px;
+  }
+
+  .stars-large {
     font-size: 14px;
   }
 
-  .price-item {
-    flex-direction: column;
-    gap: 5px;
+  .rating-number-large {
+    font-size: 14px;
   }
 
-  .price-item strong {
-    font-size: 16px;
-  }
-
-  .hour-item {
-    flex-direction: column;
-    gap: 5px;
+  .feature-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
   }
 
   .btn-book-large {
     padding: 12px;
-    font-size: 16px;
-  }
-
-  .btn-back {
-    font-size: 14px;
+    font-size: 0.9rem;
   }
 }

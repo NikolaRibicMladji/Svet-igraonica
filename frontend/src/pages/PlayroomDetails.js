@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getPlayroomById } from "../services/playroomService";
 import { useAuth } from "../context/AuthContext";
 import "../styles/PlayroomDetails.css";
-import ImageGallery from "../components/ImageGallery";
+import ImageModal from "../components/ImageModal";
 import Reviews from "../components/Reviews";
 
 const PlayroomDetails = () => {
@@ -14,6 +14,8 @@ const PlayroomDetails = () => {
   const [loading, setLoading] = useState(true);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const reviewsRef = useRef(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     loadPlayroom();
@@ -77,21 +79,17 @@ const PlayroomDetails = () => {
       </button>
 
       <div className="details-card">
-        {/* Glavna slika (profilna) */}
+        {/* Profilna slika - manja */}
         {playroom.profilnaSlika?.url && (
-          <div className="main-image-container">
+          <div className="profile-image-container">
             <img
               src={playroom.profilnaSlika.url}
               alt={playroom.naziv}
-              className="main-image"
+              className="profile-image-detail"
             />
           </div>
         )}
 
-        {/* Galerija ostalih slika */}
-        {playroom.slike && playroom.slike.length > 0 && (
-          <ImageGallery images={playroom.slike} playroomName={playroom.naziv} />
-        )}
         <div className="details-header">
           <h1>{playroom.naziv}</h1>
           <div className="playroom-rating-large">
@@ -128,9 +126,7 @@ const PlayroomDetails = () => {
           <div className="info-item">
             <strong>📞 Telefon:</strong> {playroom.kontaktTelefon}
           </div>
-          <div className="info-item">
-            <strong>📧 Email:</strong> {playroom.kontaktEmail}
-          </div>
+
           <div className="info-item">
             <strong>👶 Kapacitet dece:</strong> {playroom.kapacitet?.deca || 0}
           </div>
@@ -140,10 +136,13 @@ const PlayroomDetails = () => {
               ? `${playroom.kapacitet.roditelji} roditelja`
               : "Neograničeno"}
           </div>
+          <div className="info-item">
+            <strong>📧 Email:</strong> {playroom.kontaktEmail}
+          </div>
         </div>
 
         <div className="details-description">
-          <h3>Opis</h3>
+          <h3>Opis igraonice</h3>
           <p>{playroom.opis}</p>
         </div>
 
@@ -203,13 +202,25 @@ const PlayroomDetails = () => {
                 <div
                   key={idx}
                   className="gallery-item"
-                  onClick={() => window.open(img.url, "_blank")}
+                  onClick={() => {
+                    setSelectedImageIndex(idx);
+                    setModalOpen(true);
+                  }}
                 >
                   <img src={img.url} alt={`Slika ${idx + 1}`} />
                 </div>
               ))}
             </div>
           </div>
+        )}
+
+        {/* Modal za listanje slika */}
+        {modalOpen && (
+          <ImageModal
+            images={playroom.slike}
+            currentIndex={selectedImageIndex}
+            onClose={() => setModalOpen(false)}
+          />
         )}
 
         {/* Video galerija */}
