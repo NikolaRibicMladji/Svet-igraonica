@@ -77,11 +77,21 @@ const PlayroomDetails = () => {
       </button>
 
       <div className="details-card">
-        {/* Galerija slika */}
-        <ImageGallery
-          images={playroom.slike || []}
-          playroomName={playroom.naziv}
-        />
+        {/* Glavna slika (profilna) */}
+        {playroom.profilnaSlika?.url && (
+          <div className="main-image-container">
+            <img
+              src={playroom.profilnaSlika.url}
+              alt={playroom.naziv}
+              className="main-image"
+            />
+          </div>
+        )}
+
+        {/* Galerija ostalih slika */}
+        {playroom.slike && playroom.slike.length > 0 && (
+          <ImageGallery images={playroom.slike} playroomName={playroom.naziv} />
+        )}
         <div className="details-header">
           <h1>{playroom.naziv}</h1>
           <div className="playroom-rating-large">
@@ -122,7 +132,13 @@ const PlayroomDetails = () => {
             <strong>📧 Email:</strong> {playroom.kontaktEmail}
           </div>
           <div className="info-item">
-            <strong>👥 Kapacitet:</strong> {playroom.kapacitet} dece
+            <strong>👶 Kapacitet dece:</strong> {playroom.kapacitet?.deca || 0}
+          </div>
+          <div className="info-item">
+            <strong>👨‍👩‍👧 Kapacitet roditelja:</strong>{" "}
+            {playroom.kapacitet?.roditelji
+              ? `${playroom.kapacitet.roditelji} roditelja`
+              : "Neograničeno"}
           </div>
         </div>
 
@@ -139,14 +155,19 @@ const PlayroomDetails = () => {
         </div>
 
         <div className="details-features">
-          <h3>Pogodnosti</h3>
-          <div className="features-list">
-            {playroom.pogodnosti?.map((feature, index) => (
-              <span key={index} className="feature-badge">
-                {featureNames[feature] || feature}
-              </span>
-            ))}
-          </div>
+          <h3>✨ Besplatne pogodnosti</h3>
+          {playroom.besplatnePogodnosti &&
+          playroom.besplatnePogodnosti.length > 0 ? (
+            <div className="features-list">
+              {playroom.besplatnePogodnosti.map((feature, index) => (
+                <span key={index} className="feature-badge free-feature">
+                  ✓ {feature}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="no-features">Nema navedenih besplatnih pogodnosti.</p>
+          )}
         </div>
 
         <div className="details-working-hours">
@@ -173,6 +194,34 @@ const PlayroomDetails = () => {
             })}
           </div>
         </div>
+        {/* Galerija slika */}
+        {playroom.slike && playroom.slike.length > 0 && (
+          <div className="details-gallery">
+            <h3>📸 Galerija slika</h3>
+            <div className="gallery-grid">
+              {playroom.slike.map((img, idx) => (
+                <div
+                  key={idx}
+                  className="gallery-item"
+                  onClick={() => window.open(img.url, "_blank")}
+                >
+                  <img src={img.url} alt={`Slika ${idx + 1}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Video galerija */}
+        {playroom.video?.url && (
+          <div className="details-video">
+            <h3>🎥 Video</h3>
+            <video controls className="video-player">
+              <source src={playroom.video.url} type="video/mp4" />
+              Vaš browser ne podržava video.
+            </video>
+          </div>
+        )}
 
         <button className="btn-book-large" onClick={handleBook}>
           Rezerviši termin
@@ -201,33 +250,27 @@ const PlayroomDetails = () => {
                 <h3>🎟️ Ulaznice</h3>
                 <div className="price-item">
                   <span>Cena po detetu:</span>
-                  <strong>{playroom.cenovnik?.osnovni} RSD</strong>
+                  <strong>
+                    {playroom.osnovnaCena || playroom.cenovnik?.osnovni} RSD
+                  </strong>
                 </div>
-                {playroom.cenovnik?.poRoditelju > 0 && (
-                  <div className="price-item">
-                    <span>Cena po roditelju (pratilac):</span>
-                    <strong>{playroom.cenovnik.poRoditelju} RSD</strong>
-                  </div>
-                )}
-                {playroom.cenovnik?.produzeno > 0 && (
-                  <div className="price-item">
-                    <span>Produženo vreme (po satu):</span>
-                    <strong>{playroom.cenovnik.produzeno} RSD</strong>
-                  </div>
-                )}
-                {playroom.cenovnik?.vikend > 0 && (
-                  <div className="price-item">
-                    <span>Vikend cena:</span>
-                    <strong>{playroom.cenovnik.vikend} RSD</strong>
-                  </div>
-                )}
+                {playroom.cene &&
+                  playroom.cene.map((cena, idx) => (
+                    <div key={idx} className="price-item">
+                      <span>{cena.naziv}:</span>
+                      <strong>{cena.cena} RSD</strong>
+                      {cena.opis && (
+                        <span className="price-desc">({cena.opis})</span>
+                      )}
+                    </div>
+                  ))}
               </div>
 
               {/* Fiksni paketi */}
-              {playroom.cenovnik?.fiksniPaketi?.length > 0 && (
+              {playroom.paketi && playroom.paketi.length > 0 && (
                 <div className="price-group">
                   <h3>🎁 Fiksni paketi</h3>
-                  {playroom.cenovnik.fiksniPaketi.map((paket, idx) => (
+                  {playroom.paketi.map((paket, idx) => (
                     <div key={idx} className="price-item">
                       <span>{paket.naziv}:</span>
                       <strong>{paket.cena} RSD</strong>
@@ -240,18 +283,18 @@ const PlayroomDetails = () => {
               )}
 
               {/* Opcione pogodnosti */}
-              {playroom.opcije?.length > 0 && (
+              {playroom.dodatneUsluge && playroom.dodatneUsluge.length > 0 && (
                 <div className="price-group">
                   <h3>🎪 Dodatne pogodnosti (opciono)</h3>
-                  {playroom.opcije.map((opcija, idx) => (
+                  {playroom.dodatneUsluge.map((usluga, idx) => (
                     <div key={idx} className="price-item">
-                      <span>{opcija.naziv}:</span>
-                      <strong>{opcija.cena} RSD</strong>
-                      {opcija.tip === "po_osobi" && (
+                      <span>{usluga.naziv}:</span>
+                      <strong>{usluga.cena} RSD</strong>
+                      {usluga.tip === "po_osobi" && (
                         <span className="price-type">(po osobi)</span>
                       )}
-                      {opcija.opis && (
-                        <span className="price-desc">({opcija.opis})</span>
+                      {usluga.opis && (
+                        <span className="price-desc">({usluga.opis})</span>
                       )}
                     </div>
                   ))}
@@ -259,18 +302,19 @@ const PlayroomDetails = () => {
               )}
 
               {/* Besplatne pogodnosti */}
-              {playroom.pogodnosti?.length > 0 && (
-                <div className="price-group">
-                  <h3>✨ Besplatne pogodnosti</h3>
-                  <div className="free-features">
-                    {playroom.pogodnosti.map((feat, idx) => (
-                      <span key={idx} className="free-feature">
-                        ✓ {feat}
-                      </span>
-                    ))}
+              {playroom.besplatnePogodnosti &&
+                playroom.besplatnePogodnosti.length > 0 && (
+                  <div className="price-group">
+                    <h3>✨ Besplatne pogodnosti</h3>
+                    <div className="free-features">
+                      {playroom.besplatnePogodnosti.map((feat, idx) => (
+                        <span key={idx} className="free-feature">
+                          ✓ {feat}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         </div>

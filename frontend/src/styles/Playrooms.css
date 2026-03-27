@@ -349,6 +349,31 @@
   font-size: 1.1rem;
 }
 
+.playroom-free-features {
+  margin: 12px 0;
+}
+
+.free-features-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.free-feature-tag {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.no-free-features {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
 /* ============================================
    EMPTY STATE
 ============================================ */

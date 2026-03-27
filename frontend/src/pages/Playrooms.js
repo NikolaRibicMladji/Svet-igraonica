@@ -112,8 +112,13 @@ const Playrooms = () => {
               return (
                 <div key={playroom._id} className="playroom-card">
                   <div className="playroom-image">
-                    {mainImage ? (
-                      <img src={mainImage.url} alt={playroom.naziv} />
+                    {playroom.profilnaSlika?.url ? (
+                      <img
+                        src={playroom.profilnaSlika.url}
+                        alt={playroom.naziv}
+                      />
+                    ) : playroom.slike && playroom.slike.length > 0 ? (
+                      <img src={playroom.slike[0].url} alt={playroom.naziv} />
                     ) : (
                       <div className="no-image">🎪</div>
                     )}
@@ -123,8 +128,28 @@ const Playrooms = () => {
                     <div className="playroom-location">
                       📍 {playroom.adresa}, {playroom.grad}
                     </div>
-                    <div className="playroom-price">
-                      {playroom.cenovnik?.osnovni} RSD <span>/ po detetu</span>
+                    <div className="playroom-free-features">
+                      {playroom.besplatnePogodnosti &&
+                      playroom.besplatnePogodnosti.length > 0 ? (
+                        <div className="free-features-preview">
+                          {playroom.besplatnePogodnosti
+                            .slice(0, 3)
+                            .map((feat, idx) => (
+                              <span key={idx} className="free-feature-tag">
+                                ✓ {feat}
+                              </span>
+                            ))}
+                          {playroom.besplatnePogodnosti.length > 3 && (
+                            <span className="free-feature-tag">
+                              +{playroom.besplatnePogodnosti.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="no-free-features">
+                          Nema navedenih pogodnosti
+                        </span>
+                      )}
                     </div>
                     <div className="playroom-rating">
                       <span className="stars">

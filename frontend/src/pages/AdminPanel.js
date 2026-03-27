@@ -81,10 +81,18 @@ const AdminPanel = () => {
                   <strong>Adresa:</strong> {playroom.adresa}, {playroom.grad}
                 </p>
                 <p>
-                  <strong>Kapacitet:</strong> {playroom.kapacitet} dece
+                  <strong>Kapacitet dece:</strong>{" "}
+                  {playroom.kapacitet?.deca || 0}
                 </p>
                 <p>
-                  <strong>Cena:</strong> {playroom.cenovnik?.osnovni} RSD
+                  <strong>Kapacitet roditelja:</strong>{" "}
+                  {playroom.kapacitet?.roditelji
+                    ? `${playroom.kapacitet.roditelji} roditelja`
+                    : "Neograničeno"}
+                </p>
+                <p>
+                  <strong>Cena:</strong>{" "}
+                  {playroom.osnovnaCena || playroom.cenovnik?.osnovni} RSD
                 </p>
                 <p>
                   <strong>Opis:</strong> {playroom.opis}
