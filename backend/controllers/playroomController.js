@@ -97,10 +97,18 @@ exports.getAllPlayrooms = async (req, res) => {
 // @access  Public
 exports.getPlayroomById = async (req, res) => {
   try {
+    console.log("Dohvatam igraonicu sa ID:", req.params.id);
+
     const playroom = await Playroom.findById(req.params.id).populate(
       "vlasnikId",
       "ime prezime email telefon",
     );
+
+    console.log(
+      "Pronađena igraonica:",
+      playroom ? playroom.naziv : "Nije pronađena",
+    );
+    console.log("VideoGalerija:", playroom?.videoGalerija);
 
     if (!playroom) {
       return res.status(404).json({

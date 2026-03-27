@@ -1,27 +1,35 @@
 const multer = require("multer");
-const path = require("path");
 
-// Konfiguracija za multer (čuvanje u memoriju)
+// Čuvanje u memoriju (za Cloudinary)
 const storage = multer.memoryStorage();
 
-// Filter za tipove fajlova
+// Filter za tipove fajlova - DOZVOLJENE I SLIKE I VIDEO
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
-  const extname = allowedTypes.test(
-    path.extname(file.originalname).toLowerCase(),
-  );
-  const mimetype = allowedTypes.test(file.mimetype);
+  // Dozvoljeni formati slika
+  const imageTypes = /jpeg|jpg|png|gif|webp/;
+  // Dozvoljeni formati videa
+  const videoTypes = /mp4|mov|avi|mkv|webm/;
 
-  if (extname && mimetype) {
-    return cb(null, true);
+  const extname = file.originalname.toLowerCase().split(".").pop();
+  const mimetype = file.mimetype;
+
+  const isImage = imageTypes.test(extname) && imageTypes.test(mimetype);
+  const isVideo = videoTypes.test(extname) && videoTypes.test(mimetype);
+
+  if (isImage || isVideo) {
+    cb(null, true);
   } else {
-    cb(new Error("Samo slike su dozvoljene (jpeg, jpg, png, gif, webp)"));
+    cb(
+      new Error(
+        "Samo slike (jpeg, jpg, png, gif, webp) i video (mp4, mov, avi, mkv, webm) su dozvoljeni",
+      ),
+    );
   }
 };
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB za video
   fileFilter: fileFilter,
 });
 

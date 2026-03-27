@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/PlayroomDetails.css";
 import ImageModal from "../components/ImageModal";
 import Reviews from "../components/Reviews";
+import VideoPlayer from "../components/VideoPlayer";
 
 const PlayroomDetails = () => {
   const { id } = useParams();
@@ -71,6 +72,9 @@ const PlayroomDetails = () => {
     trampoline: "🤸 Trampoline",
     kliziste: "⛸️ Klizalište",
   };
+
+  console.log("🔍 DEBUG - videoGalerija:", playroom?.videoGalerija);
+  console.log("🔍 DEBUG - dužina:", playroom?.videoGalerija?.length);
 
   return (
     <div className="container playroom-details">
@@ -182,12 +186,21 @@ const PlayroomDetails = () => {
                 subota: "Subota",
                 nedelja: "Nedelja",
               };
+
+              // Proveri da li je dan zatvoren
+              const isZatvoreno =
+                vreme?.radi === false || (!vreme?.od && !vreme?.do);
+
               return (
                 <div key={dan} className="hour-item">
                   <span className="day">{dani[dan]}:</span>
-                  <span>
-                    {vreme?.od} - {vreme?.do}
-                  </span>
+                  {isZatvoreno ? (
+                    <span className="closed">Zatvoreno</span>
+                  ) : (
+                    <span>
+                      {vreme?.od || "09:00"} - {vreme?.do || "20:00"}
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -222,22 +235,45 @@ const PlayroomDetails = () => {
             onClose={() => setModalOpen(false)}
           />
         )}
-
-        {/* Video galerija */}
-        {playroom.video?.url && (
-          <div className="details-video">
-            <h3>🎥 Video</h3>
-            <video controls className="video-player">
-              <source src={playroom.video.url} type="video/mp4" />
-              Vaš browser ne podržava video.
-            </video>
-          </div>
-        )}
-
-        <button className="btn-book-large" onClick={handleBook}>
-          Rezerviši termin
-        </button>
       </div>
+
+      {/* Video galerija */}
+      {playroom.videoGalerija && playroom.videoGalerija.length > 0 ? (
+        <div className="details-video-gallery">
+          <h3>🎥 Video galerija</h3>
+          <div className="video-gallery-grid">
+            {playroom.videoGalerija.map((video, idx) => (
+              <div key={idx} className="video-gallery-item">
+                <video
+                  controls
+                  className="video-player-inline"
+                  src={video.url}
+                  style={{
+                    width: "100%",
+                    borderRadius: "12px",
+                    background: "#000",
+                  }}
+                >
+                  Vaš browser ne podržava video.
+                </video>
+                <div className="video-title">{video.naziv}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            margin: "20px 0",
+            padding: "20px",
+            background: "#fff3e0",
+            borderRadius: "12px",
+            textAlign: "center",
+          }}
+        >
+          <p>📹 Još nema dodatih video snimaka za ovu igraonicu.</p>
+        </div>
+      )}
 
       {/* Modal za cenovnik */}
       {showPriceModal && (

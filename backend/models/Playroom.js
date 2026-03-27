@@ -148,13 +148,19 @@ const PlayroomSchema = new mongoose.Schema({
       format: String,
     },
   ],
-  video: {
-    url: String,
-    publicId: String,
-    duration: Number,
-    format: String,
-    thumbnail: String,
-  },
+  videoGalerija: [
+    {
+      url: String,
+      publicId: String,
+      thumbnail: String,
+      naziv: String,
+      trajanje: Number,
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
   verifikovan: {
     type: Boolean,
     default: false,

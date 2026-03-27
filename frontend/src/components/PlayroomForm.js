@@ -18,7 +18,12 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
 
   const [cene, setCene] = useState(initialData?.cene || []);
   const [novaCena, setNovaCena] = useState({ naziv: "", cena: "", opis: "" });
-
+  const [videoGalerija, setVideoGalerija] = useState(
+    initialData?.videoGalerija || [],
+  );
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [noviVideo, setNoviVideo] = useState(null);
+  const [videoNaziv, setVideoNaziv] = useState("");
   const [paketi, setPaketi] = useState(initialData?.paketi || []);
   const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
 
@@ -54,6 +59,65 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
       nedelja: { od: "10:00", do: "21:00", radi: true },
     },
   );
+
+  const uploadVideo = async (file) => {
+    if (videoGalerija.length >= 3) {
+      alert("Maksimalno 3 video snimka mogu biti dodata!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("video", file);
+    setUploadingVideo(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/upload/video", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+      console.log("Odgovor:", response); // DODAJ OVO
+      const data = await response.json();
+      console.log("Podaci:", data); // DODAJ OVO
+      if (data.success) {
+        setVideoGalerija([
+          ...videoGalerija,
+          {
+            url: data.data.url,
+            publicId: data.data.publicId,
+            thumbnail: data.data.thumbnail || "",
+            naziv: videoNaziv || `Video ${videoGalerija.length + 1}`,
+            trajanje: data.data.duration || 0,
+          },
+        ]);
+        setNoviVideo(null);
+        setVideoNaziv("");
+      }
+    } catch (error) {
+      console.error("Greška pri uploadu videa:", error);
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setNoviVideo(file);
+    }
+  };
+
+  const handleAddVideo = () => {
+    if (noviVideo) {
+      uploadVideo(noviVideo);
+    }
+  };
+
+  const handleRemoveVideo = (index) => {
+    setVideoGalerija(videoGalerija.filter((_, i) => i !== index));
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -226,6 +290,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
       besplatnePogodnosti: besplatnePogodnosti,
       profilnaSlika: profilnaSlika,
       slike: slike,
+      videoGalerija: videoGalerija,
       radnoVreme: {},
     };
 
@@ -237,6 +302,10 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
       }
     }
 
+    console.log("Šaljem podatke:", {
+      ...submitData,
+      videoGalerija: videoGalerija,
+    });
     onSubmit(submitData);
   };
 
@@ -389,6 +458,80 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             ))}
           </div>
           {slike.length >= 10 && <p className="warning">Maksimalno 10 slika</p>}
+        </div>
+      </div>
+
+      {/* Video galerija */}
+      <div className="form-section">
+        <h3>🎥 Video galerija (maks. 3)</h3>
+        <p className="section-hint">
+          Dodajte video snimke sa rođendana, događaja ili prikaza igraonice
+        </p>
+
+        <div className="dynamic-input">
+          <div className="add-item">
+            <input
+              type="text"
+              placeholder="Naziv videa (npr. Rođendan 2024)"
+              value={videoNaziv}
+              onChange={(e) => setVideoNaziv(e.target.value)}
+            />
+            <input
+              type="file"
+              accept="video/*"
+              onChange={handleVideoChange}
+              disabled={uploadingVideo || videoGalerija.length >= 3}
+            />
+            <button
+              type="button"
+              onClick={handleAddVideo}
+              disabled={
+                !noviVideo || uploadingVideo || videoGalerija.length >= 3
+              }
+            >
+              {uploadingVideo ? "Upload..." : "+ Dodaj video"}
+            </button>
+          </div>
+
+          {videoGalerija.length > 0 && (
+            <div className="videos-list">
+              <h4>Postavljeni video snimci:</h4>
+              {videoGalerija.map((video, idx) => (
+                <div key={idx} className="video-item-preview">
+                  <div className="video-preview">
+                    <video
+                      controls
+                      className="video-preview-player"
+                      src={video.url}
+                      style={{ width: "200px", borderRadius: "8px" }}
+                    />
+                    <div className="video-info">
+                      <span className="video-name">{video.naziv}</span>
+                      {video.trajanje > 0 && (
+                        <span className="video-duration">
+                          {Math.floor(video.trajanje / 60)}:
+                          {(video.trajanje % 60).toString().padStart(2, "0")}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVideo(idx)}
+                      className="remove-video"
+                    >
+                      ✖ Obriši
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {videoGalerija.length >= 3 && (
+            <p className="warning">
+              Maksimalan broj video snimaka (3) je dostignut.
+            </p>
+          )}
         </div>
       </div>
 

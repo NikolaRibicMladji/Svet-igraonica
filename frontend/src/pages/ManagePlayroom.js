@@ -94,7 +94,6 @@ const ManagePlayroom = () => {
           <div className="playroom-details-header">
             <div className="header-title">
               <h2>{playroom.naziv}</h2>
-              <span className="playroom-id">ID: {playroom._id?.slice(-6)}</span>
             </div>
             <button className="btn-edit" onClick={() => setEditing(true)}>
               <span>✏️</span> Uredi podatke
@@ -139,6 +138,40 @@ const ManagePlayroom = () => {
                 <label>🖼️ Profilna slika</label>
                 <div className="profile-image">
                   <img src={playroom.profilnaSlika.url} alt="Profilna" />
+                </div>
+              </div>
+            )}
+
+            {/* Video galerija */}
+            {playroom.videoGalerija && playroom.videoGalerija.length > 0 && (
+              <div className="detail-item full-width">
+                <label>
+                  🎥 Video galerija ({playroom.videoGalerija.length})
+                </label>
+                <div className="videos-list-manage">
+                  {playroom.videoGalerija.map((video, idx) => (
+                    <div key={idx} className="video-manage-item">
+                      <video
+                        controls
+                        className="video-manage-player"
+                        src={video.url}
+                        style={{
+                          width: "200px",
+                          borderRadius: "8px",
+                          background: "#000",
+                        }}
+                      />
+                      <div className="video-manage-info">
+                        <span className="video-manage-name">{video.naziv}</span>
+                        {video.trajanje > 0 && (
+                          <span className="video-manage-duration">
+                            {Math.floor(video.trajanje / 60)}:
+                            {(video.trajanje % 60).toString().padStart(2, "0")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -282,12 +315,6 @@ const ManagePlayroom = () => {
           onClick={() => navigate("/manage-slots")}
         >
           📅 Upravljanje terminima
-        </button>
-        <button
-          className="btn-outline"
-          onClick={() => navigate(`/playrooms/${playroom._id}`)}
-        >
-          👁️ Pogledaj na sajtu
         </button>
       </div>
     </div>

@@ -286,6 +286,80 @@
   display: inline-block;
 }
 
+/* Video */
+.videos-list {
+  margin-top: 20px;
+}
+
+.videos-list h4 {
+  margin-bottom: 12px;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.video-item-preview {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.video-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.video-preview-player {
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 8px;
+}
+
+.video-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.video-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.video-duration {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.remove-video {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.remove-video:hover {
+  background: #d32f2f;
+}
+
+.warning {
+  color: #f44336;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  background: #ffebee;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
 /* Radno vreme */
 .radno-vreme-row {
   display: flex;

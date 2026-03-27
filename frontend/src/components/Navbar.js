@@ -51,18 +51,6 @@ const Navbar = () => {
             </div>
           ) : (
             <>
-              <div className="user-badge">
-                <span className="user-avatar">👤</span>
-                <span className="user-name">{user?.ime}</span>
-                <span className="user-role">
-                  {user?.role === "roditelj"
-                    ? "Roditelj"
-                    : user?.role === "vlasnik"
-                      ? "Vlasnik"
-                      : "Admin"}
-                </span>
-              </div>
-
               {/* RODITELJ */}
               {user?.role === "roditelj" && (
                 <Link to="/my-bookings" onClick={closeMenu}>

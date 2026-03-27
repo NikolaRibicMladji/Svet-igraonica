@@ -378,6 +378,47 @@
   transform: scale(1.05);
 }
 
+.videos-list-manage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+.video-manage-item {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.video-manage-player {
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 8px;
+}
+
+.video-manage-info {
+  text-align: center;
+}
+
+.video-manage-name {
+  font-weight: 600;
+  color: #1e293b;
+  display: block;
+  font-size: 0.85rem;
+}
+
+.video-manage-duration {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;
