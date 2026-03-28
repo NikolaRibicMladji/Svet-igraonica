@@ -27,7 +27,12 @@ const CreatePlayroom = () => {
 
   // Dinamičke liste
   const [cene, setCene] = useState([]);
-  const [novaCena, setNovaCena] = useState({ naziv: "", cena: "", opis: "" });
+  const [novaCena, setNovaCena] = useState({
+    naziv: "",
+    cena: "",
+    opis: "",
+    tip: "fiksno",
+  });
 
   const [paketi, setPaketi] = useState([]);
   const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
@@ -119,10 +124,11 @@ const CreatePlayroom = () => {
         {
           naziv: novaCena.naziv.trim(),
           cena: parseInt(novaCena.cena),
+          tip: novaCena.tip || "fiksno",
           opis: novaCena.opis || "",
         },
       ]);
-      setNovaCena({ naziv: "", cena: "", opis: "" });
+      setNovaCena({ naziv: "", cena: "", opis: "", tip: "fiksno" });
     }
   };
 
@@ -447,6 +453,7 @@ const CreatePlayroom = () => {
           </div>
 
           {/* Ostale cene */}
+          {/* Ostale cene */}
           <div className="form-section">
             <h3>💰 Ostale cene</h3>
             <p className="section-hint">
@@ -463,6 +470,7 @@ const CreatePlayroom = () => {
                   onChange={(e) =>
                     setNovaCena({ ...novaCena, naziv: e.target.value })
                   }
+                  style={{ flex: 2 }}
                 />
                 <input
                   type="number"
@@ -471,7 +479,18 @@ const CreatePlayroom = () => {
                   onChange={(e) =>
                     setNovaCena({ ...novaCena, cena: e.target.value })
                   }
+                  style={{ flex: 1 }}
                 />
+                <select
+                  value={novaCena.tip || "fiksno"}
+                  onChange={(e) =>
+                    setNovaCena({ ...novaCena, tip: e.target.value })
+                  }
+                  style={{ flex: 1 }}
+                >
+                  <option value="fiksno">Fiksno</option>
+                  <option value="po_osobi">Po osobi</option>
+                </select>
                 <input
                   type="text"
                   placeholder="Opis (opciono)"
@@ -479,17 +498,22 @@ const CreatePlayroom = () => {
                   onChange={(e) =>
                     setNovaCena({ ...novaCena, opis: e.target.value })
                   }
+                  style={{ flex: 2 }}
                 />
                 <button type="button" onClick={handleAddCena}>
                   + Dodaj
                 </button>
               </div>
+
               {cene.length > 0 && (
                 <div className="items-list">
                   {cene.map((item, idx) => (
                     <div key={idx} className="item">
                       <span>
                         <strong>{item.naziv}</strong> - {item.cena} RSD
+                        {item.tip === "po_osobi" && (
+                          <span className="item-type"> (po osobi)</span>
+                        )}
                       </span>
                       {item.opis && (
                         <span className="item-opis">({item.opis})</span>
@@ -506,7 +530,6 @@ const CreatePlayroom = () => {
               )}
             </div>
           </div>
-
           {/* Paketi */}
           <div className="form-section">
             <h3>🎁 Paketi</h3>

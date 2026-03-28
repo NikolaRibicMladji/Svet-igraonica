@@ -17,7 +17,12 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
   });
 
   const [cene, setCene] = useState(initialData?.cene || []);
-  const [novaCena, setNovaCena] = useState({ naziv: "", cena: "", opis: "" });
+  const [novaCena, setNovaCena] = useState({
+    naziv: "",
+    cena: "",
+    opis: "",
+    tip: "fiksno",
+  });
   const [videoGalerija, setVideoGalerija] = useState(
     initialData?.videoGalerija || [],
   );
@@ -178,10 +183,11 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         {
           naziv: novaCena.naziv.trim(),
           cena: parseInt(novaCena.cena),
+          tip: novaCena.tip || "fiksno",
           opis: novaCena.opis || "",
         },
       ]);
-      setNovaCena({ naziv: "", cena: "", opis: "" });
+      setNovaCena({ naziv: "", cena: "", opis: "", tip: "fiksno" });
     }
   };
 
@@ -566,6 +572,10 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
       {/* Ostale cene */}
       <div className="form-section">
         <h3>💰 Ostale cene</h3>
+        <p className="section-hint">
+          Dodajte dodatne cene (npr. "Produženo vreme", "Vikend", "Cena po
+          roditelju"...)
+        </p>
         <div className="dynamic-input">
           <div className="add-item">
             <input
@@ -584,6 +594,16 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
                 setNovaCena({ ...novaCena, cena: e.target.value })
               }
             />
+            <select
+              value={novaCena.tip || "fiksno"}
+              onChange={(e) =>
+                setNovaCena({ ...novaCena, tip: e.target.value })
+              }
+              style={{ flex: 1 }}
+            >
+              <option value="fiksno">Fiksno</option>
+              <option value="po_osobi">Po osobi</option>
+            </select>
             <input
               type="text"
               placeholder="Opis"
@@ -602,6 +622,9 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
                 <div key={idx} className="item">
                   <span>
                     <strong>{item.naziv}</strong> - {item.cena} RSD
+                    {item.tip === "po_osobi" && (
+                      <span className="item-type"> (po osobi)</span>
+                    )}
                   </span>
                   {item.opis && (
                     <span className="item-opis">({item.opis})</span>

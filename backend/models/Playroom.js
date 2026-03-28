@@ -184,7 +184,27 @@ const PlayroomSchema = new mongoose.Schema({
     tiktok: { type: String, default: "", trim: true },
     website: { type: String, default: "", trim: true },
   },
-
+  cene: [
+    {
+      naziv: {
+        type: String,
+        required: true,
+      },
+      cena: {
+        type: Number,
+        required: true,
+      },
+      tip: {
+        type: String,
+        enum: ["fiksno", "po_osobi"],
+        default: "fiksno",
+      },
+      opis: {
+        type: String,
+        default: "",
+      },
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

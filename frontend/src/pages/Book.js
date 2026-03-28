@@ -103,12 +103,21 @@ const Book = () => {
 
   // Izračunavanje ukupne cene
   const cenaPoDetetu = selectedSlot?.cena || playroom?.osnovnaCena || 0;
-  const cenaPoRoditelju = playroom?.cenaPoRoditelju || 0;
+  const cenaRoditelj = playroom?.cene?.find(
+    (c) =>
+      c.naziv.toLowerCase() === "roditelj" ||
+      c.naziv.toLowerCase() === "roditelji",
+  );
+  const ukupnoOsoba = brojDece + brojRoditelja;
 
   const ukupnaCena =
     cenaPoDetetu * (brojDece || 0) +
-    cenaPoRoditelju * brojRoditelja +
-    selectedOstaleCene.reduce((sum, c) => sum + c.cena, 0) +
+    selectedOstaleCene.reduce((sum, c) => {
+      if (c.tip === "po_osobi") {
+        return sum + c.cena * (brojDece + brojRoditelja);
+      }
+      return sum + c.cena;
+    }, 0) +
     selectedUsluge.reduce((sum, u) => sum + u.cena, 0);
 
   const handleBook = async () => {
@@ -147,7 +156,11 @@ const Book = () => {
       prezime: korisnikPodaci.prezime,
       email: korisnikPodaci.email,
       telefon: korisnikPodaci.telefon,
-      selectedOstaleCene: selectedOstaleCene.map((c) => c.naziv),
+      selectedOstaleCene: selectedOstaleCene.map((c) => ({
+        naziv: c.naziv,
+        tip: c.tip,
+        cena: c.cena,
+      })),
       selectedUsluge: selectedUsluge.map((u) => u.naziv),
       ukupnaCena,
     });
@@ -316,7 +329,8 @@ const Book = () => {
             </div>
 
             {/* 2. BROJ RODITELJA (ako vlasnik ima cenu) */}
-            {playroom.cenaPoRoditelju > 0 && (
+            {/* Broj roditelja (ako postoji cena) */}
+            {cenaRoditelj && (
               <div className="form-group">
                 <label>👨‍👩‍👧 Broj roditelja (pratilaca)</label>
                 <input
@@ -329,7 +343,9 @@ const Book = () => {
                   }
                 />
                 <small className="price-hint">
-                  Maksimalno {playroom.kapacitet?.roditelji || 50} roditelja
+                  {cenaRoditelj.tip === "po_osobi"
+                    ? `${cenaRoditelj.cena} RSD po roditelju`
+                    : `${cenaRoditelj.cena} RSD fiksno`}
                 </small>
               </div>
             )}
@@ -351,6 +367,9 @@ const Book = () => {
                         />
                         <span className="option-name">{cena.naziv}</span>
                         <span className="option-price">+{cena.cena} RSD</span>
+                        {cena.tip === "po_osobi" && (
+                          <span className="option-type">(po osobi)</span>
+                        )}
                       </label>
                       {cena.opis && <p className="option-desc">{cena.opis}</p>}
                     </div>
@@ -476,22 +495,32 @@ const Book = () => {
                 </div>
               )}
 
-              {brojRoditelja > 0 && playroom.cenaPoRoditelju > 0 && (
+              {brojRoditelja > 0 && cenaRoditelj && (
                 <div className="summary-item">
                   <span>
-                    {brojRoditelja} roditelj × {playroom.cenaPoRoditelju} RSD
+                    {brojRoditelja} roditelj × {cenaRoditelj.cena} RSD
+                    {cenaRoditelj.tip === "po_osobi" && " (po osobi)"}
                   </span>
-                  <span>{brojRoditelja * playroom.cenaPoRoditelju} RSD</span>
+                  <span>
+                    {cenaRoditelj.tip === "po_osobi"
+                      ? `+${cenaRoditelj.cena * brojRoditelja} RSD`
+                      : `+${cenaRoditelj.cena} RSD`}
+                  </span>
                 </div>
               )}
-
               {selectedOstaleCene.map((c, idx) => (
                 <div key={idx} className="summary-item">
-                  <span>{c.naziv}</span>
-                  <span>+{c.cena} RSD</span>
+                  <span>
+                    {c.naziv}
+                    {c.tip === "po_osobi" && ` (× ${ukupnoOsoba} osoba)`}
+                  </span>
+                  <span>
+                    {c.tip === "po_osobi"
+                      ? `+${c.cena * ukupnoOsoba} RSD`
+                      : `+${c.cena} RSD`}
+                  </span>
                 </div>
               ))}
-
               {selectedUsluge.map((u, idx) => (
                 <div key={idx} className="summary-item">
                   <span>{u.naziv}</span>
