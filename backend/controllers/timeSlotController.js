@@ -123,9 +123,9 @@ exports.getTimeSlotsByPlayroom = async (req, res) => {
     }));
 
     // PRAVILNA PROVERA
-    for (let hour = startHour; hour < endHour; hour += 2) {
+    for (let hour = startHour; hour < endHour; hour += 1) {
       const vremeOd = `${hour.toString().padStart(2, "0")}:00`;
-      const vremeDo = `${(hour + 2).toString().padStart(2, "0")}:00`;
+      const vremeDo = `${(hour + 1).toString().padStart(2, "0")}:00`;
 
       const foundBooking = existingBookings.find((b) => b.vremeOd === vremeOd);
       const isZauzeto = foundBooking ? true : false; // <--- OVO JE KLJUČNO
@@ -462,9 +462,9 @@ exports.getAllTimeSlotsForOwner = async (req, res) => {
     // Cena iz igraonice
     const cenaPoTerminu = playroom.cenovnik?.osnovni || 800;
 
-    for (let hour = startHour; hour < endHour; hour += 2) {
+    for (let hour = startHour; hour < endHour; hour += 1) {
       const vremeOd = `${hour.toString().padStart(2, "0")}:00`;
-      const vremeDo = `${(hour + 2).toString().padStart(2, "0")}:00`;
+      const vremeDo = `${(hour + 1).toString().padStart(2, "0")}:00`;
 
       // Proveri da li postoji rezervacija za OVO TAČNO VREME
       const foundBooking = existingBookings.find((b) => b.vremeOd === vremeOd);

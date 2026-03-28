@@ -96,9 +96,9 @@ const generateTimeSlotsForPlayroom = async (playroomId, days = 30) => {
         continue;
       }
 
-      for (let hour = startHour; hour < endHour; hour += 2) {
+      for (let hour = startHour; hour < endHour; hour += 1) {
         const vremeOd = `${hour.toString().padStart(2, "0")}:00`;
-        const vremeDo = `${(hour + 2).toString().padStart(2, "0")}:00`;
+        const vremeDo = `${(hour + 1).toString().padStart(2, "0")}:00`;
 
         // Proveri da li vremeDo nije preko radnog vremena
         const endHourNum = parseInt(vremeDo.split(":")[0]);
@@ -283,9 +283,9 @@ const generateTimeSlotsForDay = async (playroomId, datum) => {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    for (let hour = startHour; hour < endHour; hour += 2) {
+    for (let hour = startHour; hour < endHour; hour += 1) {
       const vremeOd = `${hour.toString().padStart(2, "0")}:00`;
-      const vremeDo = `${(hour + 2).toString().padStart(2, "0")}:00`;
+      const vremeDo = `${(hour + 1).toString().padStart(2, "0")}:00`;
 
       const existingSlot = await TimeSlot.findOne({
         playroomId,

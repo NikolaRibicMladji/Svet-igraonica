@@ -44,11 +44,7 @@ const PlayroomDetails = () => {
   };
 
   const handleBook = () => {
-    if (!isAuthenticated) {
-      navigate("/login");
-    } else {
-      navigate(`/book/${id}`);
-    }
+    navigate(`/book/${id}`);
   };
 
   if (loading) {
@@ -201,11 +197,19 @@ const PlayroomDetails = () => {
           </div>
         </div>
 
-        {/* Dugme za cenovnik */}
+        {/* Dugme za cenovnik i rezervaciju */}
         <div className="details-price">
-          <button className="btn-price" onClick={() => setShowPriceModal(true)}>
-            💰 Pogledaj cenovnik
-          </button>
+          <div className="price-buttons">
+            <button
+              className="btn-price"
+              onClick={() => setShowPriceModal(true)}
+            >
+              💰 Cenovnik
+            </button>
+            <button className="btn-book" onClick={handleBook}>
+              📅 Rezerviši
+            </button>
+          </div>
         </div>
 
         <div className="details-features">
