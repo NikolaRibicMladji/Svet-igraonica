@@ -12,7 +12,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Playrooms from "./pages/Playrooms";
 import CreatePlayroom from "./pages/CreatePlayroom";
-import ManagePlayroom from "./pages/ManagePlayroom"; // NOVA STRANICA
+import ManagePlayroom from "./pages/ManagePlayroom";
 import AdminPanel from "./pages/AdminPanel";
 import PlayroomDetails from "./pages/PlayroomDetails";
 import Book from "./pages/Book";
@@ -85,16 +85,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/playrooms" element={<Playrooms />} />
           <Route path="/playrooms/:id" element={<PlayroomDetails />} />
+          <Route path="/book/:id" element={<Book />} />
 
           {/* ========== RODITELJ RUTE ========== */}
-          <Route
-            path="/book/:id"
-            element={
-              <RoditeljRoute>
-                <Book />
-              </RoditeljRoute>
-            }
-          />
           <Route
             path="/my-bookings"
             element={
@@ -105,7 +98,6 @@ function App() {
           />
 
           {/* ========== VLASNIK RUTE ========== */}
-          {/* Ako vlasnik nema igraonicu → ide na create-playroom */}
           <Route
             path="/manage-playroom"
             element={

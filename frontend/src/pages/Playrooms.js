@@ -60,9 +60,9 @@ const Playrooms = () => {
     navigate(`/playrooms/${id}`);
   };
 
-  const handleBook = (id) => {
-    navigate(`/book/${id}`);
-  };
+  // const handleBook = (id) => {
+  // navigate(`/book/${id}`);
+  //};
 
   if (loading) {
     return <div className="container loading">Učitavanje igraonica...</div>;
@@ -174,12 +174,6 @@ const Playrooms = () => {
                         onClick={() => handleViewDetails(playroom._id)}
                       >
                         Detalji
-                      </button>
-                      <button
-                        className="btn-book"
-                        onClick={() => handleBook(playroom._id)}
-                      >
-                        Rezerviši
                       </button>
                     </div>
                   </div>
