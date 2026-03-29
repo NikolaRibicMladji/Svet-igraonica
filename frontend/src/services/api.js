@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Baza URL za sve API pozive
-const API_URL = "https://svet-igraonica.onrender.com";
+const API_URL = "https://svet-igraonica.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_URL,
