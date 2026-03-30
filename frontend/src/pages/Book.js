@@ -143,6 +143,14 @@ const Book = () => {
   };
 
   const handleBook = async () => {
+    if (selectedSlot?.zauzeto) {
+      setError("Termin je upravo zauzet, izaberite drugi");
+      setSelectedSlot(null);
+      await loadTimeSlots();
+      scrollToTop();
+      return;
+    }
+
     if (!selectedSlot) {
       setError("Izaberite termin");
       scrollToTop();
@@ -194,6 +202,7 @@ const Book = () => {
     });
 
     if (result.success) {
+      await loadTimeSlots();
       navigate("/booking-success");
     } else {
       setError(result.error);

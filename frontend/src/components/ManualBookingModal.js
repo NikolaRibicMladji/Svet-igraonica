@@ -1,20 +1,37 @@
 import React, { useState } from "react";
 import "../styles/ManualBookingModal.css";
 
-const ManualBookingModal = ({ isOpen, onClose, slot, playroom, onConfirm }) => {
+const ManualBookingModal = ({ onClose, slot, onSubmit }) => {
   const [brojDece, setBrojDece] = useState(1);
   const [napomena, setNapomena] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  if (!isOpen || !slot) return null;
+  if (!slot) return null;
 
-  const ukupnaCena = slot.cena * brojDece;
+  const maxDece = slot.slobodno || slot.maxDece || 20;
+  const ukupnaCena = (slot.cena || 0) * brojDece;
 
   const handleConfirm = async () => {
+    if (!brojDece || brojDece < 1) {
+      setError("Broj dece mora biti najmanje 1");
+      return;
+    }
+
+    if (brojDece > maxDece) {
+      setError(`Maksimalan broj dece za ovaj termin je ${maxDece}`);
+      return;
+    }
+
     setLoading(true);
-    await onConfirm(slot, brojDece, napomena);
+    setError("");
+
+    await onSubmit({
+      brojDece,
+      napomena,
+    });
+
     setLoading(false);
-    onClose();
   };
 
   return (
@@ -30,9 +47,6 @@ const ManualBookingModal = ({ isOpen, onClose, slot, playroom, onConfirm }) => {
         <div className="modal-body">
           <div className="booking-summary">
             <p>
-              <strong>Igraonica:</strong> {playroom?.naziv}
-            </p>
-            <p>
               <strong>Datum:</strong>{" "}
               {new Date(slot.datum).toLocaleDateString("sr-RS")}
             </p>
@@ -42,14 +56,19 @@ const ManualBookingModal = ({ isOpen, onClose, slot, playroom, onConfirm }) => {
             <p>
               <strong>Cena po detetu:</strong> {slot.cena} RSD
             </p>
+            <p>
+              <strong>Slobodnih mesta:</strong> {maxDece}
+            </p>
           </div>
+
+          {error && <div className="error-message">{error}</div>}
 
           <div className="form-group">
             <label>👶 Broj dece</label>
             <input
               type="number"
               min="1"
-              max="20"
+              max={maxDece}
               value={brojDece}
               onChange={(e) =>
                 setBrojDece(Math.max(1, parseInt(e.target.value) || 1))
@@ -69,28 +88,22 @@ const ManualBookingModal = ({ isOpen, onClose, slot, playroom, onConfirm }) => {
             />
           </div>
 
-          <div className="price-summary-modal">
-            <div className="price-row">
-              <span>Broj dece:</span>
-              <strong>{brojDece}</strong>
-            </div>
-            <div className="price-row">
-              <span>Cena po detetu:</span>
-              <strong>{slot.cena} RSD</strong>
-            </div>
-            <div className="price-total">
-              <span>Ukupno za naplatu:</span>
-              <strong className="total-amount">{ukupnaCena} RSD</strong>
-            </div>
+          <div className="total-price">
+            <span>Ukupno:</span>
+            <strong>{ukupnaCena} RSD</strong>
           </div>
         </div>
 
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose}>
+          <button
+            className="btn-secondary"
+            onClick={onClose}
+            disabled={loading}
+          >
             Otkaži
           </button>
           <button
-            className="btn-confirm"
+            className="btn-primary"
             onClick={handleConfirm}
             disabled={loading}
           >

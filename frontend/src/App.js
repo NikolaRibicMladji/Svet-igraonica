@@ -18,7 +18,6 @@ import PlayroomDetails from "./pages/PlayroomDetails";
 import Book from "./pages/Book";
 import BookingSuccess from "./pages/BookingSuccess";
 import MyBookings from "./pages/MyBookings";
-import ManageTimeSlots from "./pages/ManageTimeSlots";
 import OwnerTimeSlots from "./pages/OwnerTimeSlots";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import "./styles/global.css";
@@ -117,11 +116,7 @@ function AppRoutes() {
         />
         <Route
           path="/manage-slots"
-          element={
-            <VlasnikRoute>
-              <ManageTimeSlots />
-            </VlasnikRoute>
-          }
+          element={<Navigate to="/owner-slots" replace />}
         />
         <Route
           path="/owner-slots"

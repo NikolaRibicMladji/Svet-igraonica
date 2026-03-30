@@ -62,6 +62,13 @@ exports.createBooking = async (req, res) => {
       vremeDo,
     });
 
+    if (!existingTimeSlot) {
+      return res.status(400).json({
+        success: false,
+        message: "Termin ne postoji",
+      });
+    }
+
     if (existingTimeSlot && existingTimeSlot.zauzeto) {
       return res.status(400).json({
         success: false,
@@ -72,7 +79,7 @@ exports.createBooking = async (req, res) => {
     // Proveri da li već postoji rezervacija za ovo vreme
     const existingBooking = await Booking.findOne({
       playroomId,
-      datum: new Date(datum),
+      datum: { $gte: slotDateStart, $lte: slotDateEnd },
       vremeOd,
       vremeDo,
       status: { $ne: "otkazano" },

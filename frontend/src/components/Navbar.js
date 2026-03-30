@@ -67,7 +67,7 @@ const Navbar = () => {
                   <Link to="/manage-playroom" onClick={closeMenu}>
                     🏢 Moja igraonica
                   </Link>
-                  <Link to="/manage-slots" onClick={closeMenu}>
+                  <Link to="/owner-slots" onClick={closeMenu}>
                     📅 Upravljanje terminima
                   </Link>
                 </>
