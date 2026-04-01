@@ -42,6 +42,7 @@ app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 // POPRAVLJENO: Spojio sam tvoje dve upload rute u jednu logičnu
 app.use("/api/upload", require("./routes/uploadRoutes"));
+app.use("/api/upload", require("./routes/tempUploadRoutes"));
 
 // 5. REŠENJE ZA "CANNOT GET" GREŠKU (SPA Routing)
 // Ovo omogućava React-u da preuzme rute poput /vlasnik/dashboard

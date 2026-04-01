@@ -38,6 +38,14 @@ const TimeSlotSchema = new mongoose.Schema({
     type: Number,
     required: [true, "Cena je obavezna"],
   },
+  vanRadnogVremena: {
+    type: Boolean,
+    default: false,
+  },
+  napomenaAdmin: {
+    type: String,
+    default: "",
+  },
   createdAt: {
     type: Date,
     default: Date.now,

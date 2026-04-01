@@ -1,6 +1,40 @@
 const Playroom = require("../models/Playroom");
 const { generateTimeSlotsForPlayroom } = require("../utils/generateTimeSlots");
 
+const isEqual = require("lodash.isequal");
+
+const normalizeRadnoVreme = (radnoVreme = {}) => {
+  const days = [
+    "ponedeljak",
+    "utorak",
+    "sreda",
+    "cetvrtak",
+    "petak",
+    "subota",
+    "nedelja",
+  ];
+
+  const normalized = {};
+
+  for (const day of days) {
+    const value = radnoVreme?.[day] || {};
+
+    const radi = value.radi === true;
+
+    if (!radi) {
+      normalized[day] = { radi: false };
+    } else {
+      normalized[day] = {
+        od: value.od || "",
+        do: value.do || "",
+        radi: true,
+      };
+    }
+  }
+
+  return normalized;
+};
+
 // @desc    Kreiraj novu igraonicu (samo vlasnici)
 // @route   POST /api/playrooms
 // @access  Private (vlasnik ili admin)
@@ -197,27 +231,30 @@ exports.updatePlayroom = async (req, res) => {
       });
     }
 
+    const oldRadnoVreme = normalizeRadnoVreme(playroom.radnoVreme);
+    const newRadnoVreme = normalizeRadnoVreme(req.body.radnoVreme);
+
     // Ažuriraj igraonicu
     playroom = await Playroom.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
 
-    // Ako je promenjeno radno vreme, regeneriši termine
-    if (req.body.radnoVreme) {
+    // Regeneriši termine SAMO ako je radno vreme stvarno promenjeno
+    if (req.body.radnoVreme && !isEqual(oldRadnoVreme, newRadnoVreme)) {
       console.log(
-        `🔄 Radno vreme promenjeno, regenerišem termine za ${playroom.naziv}...`,
+        `🔄 Radno vreme promenjeno, sinhronizujem termine za ${playroom.naziv}...`,
       );
+
       const {
-        generateTimeSlotsForPlayroom,
-      } = require("../utils/generateTimeSlots");
-      const {
-        deleteAllTimeSlotsForPlayroom,
+        syncTimeSlotsWithWorkingHours,
       } = require("../utils/generateTimeSlots");
 
-      await deleteAllTimeSlotsForPlayroom(playroom._id);
-      const result = await generateTimeSlotsForPlayroom(playroom._id, 30);
-      console.log(`✅ Regenerisano ${result.createdCount} termina`);
+      const result = await syncTimeSlotsWithWorkingHours(playroom._id, 30);
+
+      console.log(
+        `✅ Sinhronizacija termina završena | novo: ${result.createdCount} | deaktivirano: ${result.deactivatedCount} | konflikti: ${result.conflictCount}`,
+      );
     }
 
     res.status(200).json({

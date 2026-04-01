@@ -286,6 +286,12 @@
   display: inline-block;
 }
 
+.error-message {
+  color: red;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
 /* Video */
 .videos-list {
   margin-top: 20px;

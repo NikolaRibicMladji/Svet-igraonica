@@ -29,6 +29,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [noviVideo, setNoviVideo] = useState(null);
   const [videoNaziv, setVideoNaziv] = useState("");
+  const [error, setError] = useState("");
   const [paketi, setPaketi] = useState(initialData?.paketi || []);
   const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
   const [cenaRoditelja, setCenaRoditelja] = useState(
@@ -255,26 +256,35 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
   const uploadImage = async (file, isProfilna = false) => {
     const formDataUpload = new FormData();
     formDataUpload.append("image", file);
+
     setUploading(true);
+    setError("");
 
     try {
       const response = await fetch("http://localhost:5000/api/upload/temp", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: formDataUpload,
       });
+
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Greška pri uploadu slike");
+      }
+
       if (data.success) {
         if (isProfilna) {
           setProfilnaSlika(data.data);
         } else {
-          setSlike([...slike, data.data]);
+          setSlike((prev) => [...prev, data.data]);
         }
       }
     } catch (error) {
       console.error("Greška pri uploadu:", error);
+      setError(error.message || "Upload slike nije uspeo");
     } finally {
       setUploading(false);
     }

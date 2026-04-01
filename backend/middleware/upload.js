@@ -1,36 +1,58 @@
 const multer = require("multer");
+const path = require("path");
 
-// Čuvanje u memoriju (za Cloudinary)
+// Čuvanje u memoriji (za Cloudinary)
 const storage = multer.memoryStorage();
 
-// Filter za tipove fajlova - DOZVOLJENE I SLIKE I VIDEO
+const allowedImageExtensions = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".svg",
+  ".avif",
+  ".heic",
+  ".heif",
+  ".tif",
+  ".tiff",
+  ".ico",
+]);
+
+const allowedVideoExtensions = new Set([
+  ".mp4",
+  ".mov",
+  ".avi",
+  ".mkv",
+  ".webm",
+]);
+
 const fileFilter = (req, file, cb) => {
-  // Dozvoljeni formati slika
-  const imageTypes = /jpeg|jpg|png|gif|webp/;
-  // Dozvoljeni formati videa
-  const videoTypes = /mp4|mov|avi|mkv|webm/;
+  const ext = path.extname(file.originalname || "").toLowerCase();
+  const mime = (file.mimetype || "").toLowerCase();
 
-  const extname = file.originalname.toLowerCase().split(".").pop();
-  const mimetype = file.mimetype;
+  const isImageMime = mime.startsWith("image/");
+  const isVideoMime = mime.startsWith("video/");
 
-  const isImage = imageTypes.test(extname) && imageTypes.test(mimetype);
-  const isVideo = videoTypes.test(extname) && videoTypes.test(mimetype);
+  const isAllowedImage = isImageMime || allowedImageExtensions.has(ext);
+  const isAllowedVideo = isVideoMime || allowedVideoExtensions.has(ext);
 
-  if (isImage || isVideo) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Samo slike (jpeg, jpg, png, gif, webp) i video (mp4, mov, avi, mkv, webm) su dozvoljeni",
-      ),
-    );
+  if (isAllowedImage || isAllowedVideo) {
+    return cb(null, true);
   }
+
+  return cb(
+    new Error(
+      "Dozvoljeni su samo image/* fajlovi i video fajlovi (mp4, mov, avi, mkv, webm).",
+    ),
+  );
 };
 
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB za video
-  fileFilter: fileFilter,
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter,
 });
 
 module.exports = upload;

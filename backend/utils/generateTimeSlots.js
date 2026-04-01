@@ -128,7 +128,7 @@ const generateTimeSlotsForPlayroom = async (playroomId, days = 30) => {
             vremeDo,
             maxDece: playroom.kapacitet?.deca || 20,
             slobodno: playroom.kapacitet?.deca || 20,
-            cena: playroom.osnovnaCena || playroom.cenovnik?.osnovni || 800,
+            cena: playroom.osnovnaCena ?? playroom.cenovnik?.osnovni ?? 800,
             zauzeto: false,
             aktivno: true,
           });
@@ -320,10 +320,166 @@ const generateTimeSlotsForDay = async (playroomId, datum) => {
   }
 };
 
+const syncTimeSlotsWithWorkingHours = async (playroomId, days = 30) => {
+  try {
+    const playroom = await Playroom.findById(playroomId);
+    if (!playroom) {
+      return { success: false, message: "Igraonica nije pronađena" };
+    }
+
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + days);
+    endDate.setHours(23, 59, 59, 999);
+
+    const danMap = {
+      monday: "ponedeljak",
+      tuesday: "utorak",
+      wednesday: "sreda",
+      thursday: "cetvrtak",
+      friday: "petak",
+      saturday: "subota",
+      sunday: "nedelja",
+    };
+
+    const expectedKeys = new Set();
+
+    let createdCount = 0;
+    let deactivatedCount = 0;
+    let conflictCount = 0;
+
+    for (
+      let d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const currentDate = new Date(d);
+
+      const danUNedelji = currentDate
+        .toLocaleDateString("en-US", { weekday: "long" })
+        .toLowerCase();
+
+      const radnoVreme = playroom.radnoVreme?.[danMap[danUNedelji]];
+
+      const neRadi =
+        !radnoVreme ||
+        radnoVreme.radi === false ||
+        !radnoVreme.od ||
+        !radnoVreme.do;
+
+      if (neRadi) continue;
+
+      const startHour = parseInt(radnoVreme.od.split(":")[0], 10);
+      const endHour = parseInt(radnoVreme.do.split(":")[0], 10);
+
+      if (startHour >= endHour) continue;
+
+      for (let hour = startHour; hour < endHour; hour += 1) {
+        const vremeOd = `${hour.toString().padStart(2, "0")}:00`;
+        const vremeDo = `${(hour + 1).toString().padStart(2, "0")}:00`;
+
+        const endHourNum = parseInt(vremeDo.split(":")[0], 10);
+        if (endHourNum > endHour) continue;
+
+        const dateKey = currentDate.toISOString().split("T")[0];
+        const slotKey = `${dateKey}_${vremeOd}_${vremeDo}`;
+        expectedKeys.add(slotKey);
+
+        const startOfDay = new Date(currentDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(currentDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingSlot = await TimeSlot.findOne({
+          playroomId,
+          datum: { $gte: startOfDay, $lte: endOfDay },
+          vremeOd,
+          vremeDo,
+        });
+
+        if (!existingSlot) {
+          await TimeSlot.create({
+            playroomId,
+            datum: new Date(currentDate),
+            vremeOd,
+            vremeDo,
+            maxDece: playroom.kapacitet?.deca || 20,
+            slobodno: playroom.kapacitet?.deca || 20,
+            cena: playroom.osnovnaCena || playroom.cenovnik?.osnovni || 800,
+            zauzeto: false,
+            aktivno: true,
+            vanRadnogVremena: false,
+            napomenaAdmin: "",
+          });
+          createdCount++;
+        } else {
+          const updates = {};
+
+          if (existingSlot.aktivno === false) updates.aktivno = true;
+          if (existingSlot.vanRadnogVremena === true)
+            updates.vanRadnogVremena = false;
+          if (existingSlot.napomenaAdmin) updates.napomenaAdmin = "";
+
+          if (Object.keys(updates).length > 0) {
+            await TimeSlot.findByIdAndUpdate(existingSlot._id, updates);
+          }
+        }
+      }
+    }
+
+    const existingSlots = await TimeSlot.find({
+      playroomId,
+      datum: { $gte: startDate, $lte: endDate },
+    });
+
+    for (const slot of existingSlots) {
+      const dateKey = new Date(slot.datum).toISOString().split("T")[0];
+      const slotKey = `${dateKey}_${slot.vremeOd}_${slot.vremeDo}`;
+
+      const shouldExist = expectedKeys.has(slotKey);
+
+      if (!shouldExist) {
+        if (slot.zauzeto) {
+          await TimeSlot.findByIdAndUpdate(slot._id, {
+            vanRadnogVremena: true,
+            napomenaAdmin:
+              "Slot je van novog radnog vremena, ali ima postojeću rezervaciju.",
+          });
+          conflictCount++;
+        } else {
+          await TimeSlot.findByIdAndUpdate(slot._id, {
+            aktivno: false,
+            vanRadnogVremena: true,
+            napomenaAdmin: "Slot deaktiviran zbog promene radnog vremena.",
+          });
+          deactivatedCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      createdCount,
+      deactivatedCount,
+      conflictCount,
+    };
+  } catch (error) {
+    console.error("Greška pri sinhronizaciji termina:", error);
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
+};
+
 module.exports = {
   generateTimeSlotsForPlayroom,
   generateAllTimeSlots,
   deleteAllTimeSlotsForPlayroom,
   resetTimeSlotsForPlayroom,
   generateTimeSlotsForDay,
+  syncTimeSlotsWithWorkingHours,
 };

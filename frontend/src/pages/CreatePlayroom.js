@@ -8,6 +8,7 @@ const CreatePlayroom = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [cenaRoditelja, setCenaRoditelja] = useState({
     tip: "ne_naplacuje",
@@ -62,7 +63,6 @@ const CreatePlayroom = () => {
   // Slike
   const [profilnaSlika, setProfilnaSlika] = useState(null);
   const [slike, setSlike] = useState([]);
-  const [uploading, setUploading] = useState(false);
 
   // Radno vreme
   const [radnoVreme, setRadnoVreme] = useState({
@@ -201,24 +201,36 @@ const CreatePlayroom = () => {
     const formData = new FormData();
     formData.append("image", file);
 
+    setUploading(true);
+    setError("");
+
     try {
       const response = await fetch("http://localhost:5000/api/upload/temp", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: formData,
       });
+
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Greška pri uploadu slike");
+      }
+
       if (data.success) {
         if (isProfilna) {
           setProfilnaSlika(data.data);
         } else {
-          setSlike([...slike, data.data]);
+          setSlike((prev) => [...prev, data.data]);
         }
       }
     } catch (error) {
       console.error("Greška pri uploadu:", error);
+      setError(error.message || "Upload slike nije uspeo");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -415,6 +427,8 @@ const CreatePlayroom = () => {
                 accept="image/*"
                 onChange={(e) => handleFileChange(e, true)}
               />
+              {uploading && <p>Upload u toku...</p>}
+              {error && <p className="error-message">{error}</p>}
               {profilnaSlika && (
                 <div className="uploaded-image">
                   <img src={profilnaSlika.url} alt="Profilna" />
@@ -433,6 +447,8 @@ const CreatePlayroom = () => {
                 onChange={(e) => handleFileChange(e, false)}
                 disabled={slike.length >= 10}
               />
+              {uploading && <p>Upload u toku...</p>}
+              {error && <p className="error-message">{error}</p>}
               <div className="image-list">
                 {slike.map((img, idx) => (
                   <div key={idx} className="image-item">
