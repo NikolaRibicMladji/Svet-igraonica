@@ -7,6 +7,7 @@ const BookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
+      index: true,
     },
 
     playroomId: {
@@ -68,18 +69,21 @@ const BookingSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      maxlength: 500,
     },
 
     imeRoditelja: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     prezimeRoditelja: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     emailRoditelja: {
@@ -87,12 +91,14 @@ const BookingSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Email nije validan"],
     },
 
     telefonRoditelja: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 30,
     },
   },
   {
@@ -110,5 +116,11 @@ BookingSchema.index(
     },
   },
 );
+
+// ⚡ Brži query za owner dashboard
+BookingSchema.index({ playroomId: 1, datum: 1 });
+
+// ⚡ Brži query za user istoriju
+BookingSchema.index({ roditeljId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Booking", BookingSchema);

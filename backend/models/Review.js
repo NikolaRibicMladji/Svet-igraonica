@@ -1,35 +1,52 @@
 const mongoose = require("mongoose");
 
-const ReviewSchema = new mongoose.Schema({
-  playroomId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Playroom",
-    required: true,
+const ReviewSchema = new mongoose.Schema(
+  {
+    playroomId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Playroom",
+      required: true,
+      index: true,
+    },
+
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    userName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 150,
+    },
+
+    rating: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+      index: true,
+    },
+
+    comment: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500,
+    },
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
+  {
+    timestamps: true,
   },
-  userName: {
-    type: String,
-    required: true,
-  },
-  rating: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 5,
-  },
-  comment: {
-    type: String,
-    required: true,
-    maxlength: 500,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+);
+
+// 🔒 jedan user = jedna recenzija po igraonici
+ReviewSchema.index({ playroomId: 1, userId: 1 }, { unique: true });
+
+// ⚡ brži fetch recenzija po datumu
+ReviewSchema.index({ playroomId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Review", ReviewSchema);
