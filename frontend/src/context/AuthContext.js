@@ -5,29 +5,63 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+const TOKEN_KEY = "accessToken";
+const USER_KEY = "user";
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem(USER_KEY);
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+  const setAuthData = (userData, token) => {
     if (token) {
-      loadUser();
-    } else {
-      setLoading(false);
+      localStorage.setItem(TOKEN_KEY, token);
     }
+
+    if (userData) {
+      localStorage.setItem(USER_KEY, JSON.stringify(userData));
+      setUser(userData);
+    }
+  };
+
+  const clearAuthData = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    loadUser();
   }, []);
 
   const loadUser = async () => {
     try {
       const response = await api.get("/auth/me");
-      setUser(response.data.user);
+
+      if (response?.data?.user) {
+        setUser(response.data.user);
+        localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+      } else {
+        clearAuthData();
+      }
     } catch (err) {
       console.error("Greška pri učitavanju korisnika:", err);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      setUser(null);
+      clearAuthData();
     } finally {
       setLoading(false);
     }
@@ -35,16 +69,18 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     setError(null);
+
     try {
       const response = await api.post("/auth/register", userData);
 
-      localStorage.setItem("accessToken", response.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      setUser(response.data.user);
+      const token = response.data?.accessToken;
+      const userDataRes = response.data?.user;
 
-      return { success: true, user: response.data.user };
+      setAuthData(userDataRes, token);
+
+      return { success: true, user: userDataRes };
     } catch (err) {
-      const msg = err.response?.data?.message || "Greška pri registraciji";
+      const msg = err?.response?.data?.message || "Greška pri registraciji.";
       setError(msg);
       return { success: false, error: msg };
     }
@@ -52,16 +88,21 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     setError(null);
+
     try {
-      const res = await api.post("/auth/login", { email, lozinka });
+      const response = await api.post("/auth/login", {
+        email,
+        password, // 🔥 BITNO: backend očekuje password
+      });
 
-      localStorage.setItem("accessToken", res.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      setUser(res.data.user);
+      const token = response.data?.accessToken;
+      const userDataRes = response.data?.user;
 
-      return { success: true, user: res.data.user };
+      setAuthData(userDataRes, token);
+
+      return { success: true, user: userDataRes };
     } catch (err) {
-      const msg = err.response?.data?.message || "Greška pri prijavi";
+      const msg = err?.response?.data?.message || "Greška pri prijavi.";
       setError(msg);
       return { success: false, error: msg };
     }
@@ -72,11 +113,9 @@ export const AuthProvider = ({ children }) => {
       await api.post("/auth/logout");
     } catch (err) {
       console.error("Logout error:", err);
+    } finally {
+      clearAuthData();
     }
-
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    setUser(null);
   };
 
   const value = {
@@ -86,7 +125,7 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: Boolean(user),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

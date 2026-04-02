@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyBookings, cancelBooking } from "../services/bookingService";
+import { cancelBooking, getMyBookings } from "../services/bookingService";
 import "../styles/MyBookings.css";
 
 const MyBookings = () => {
   const navigate = useNavigate();
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cancellingId, setCancellingId] = useState("");
 
   useEffect(() => {
     loadBookings();
@@ -17,48 +19,64 @@ const MyBookings = () => {
     setLoading(true);
     setError("");
 
-    const result = await getMyBookings();
+    try {
+      const result = await getMyBookings();
 
-    if (result.success) {
-      setBookings(result.data);
-    } else {
-      setError(result.error || "Greška pri učitavanju rezervacija");
+      if (result?.success) {
+        setBookings(Array.isArray(result.data) ? result.data : []);
+      } else {
+        setBookings([]);
+        setError(result?.error || "Greška pri učitavanju rezervacija.");
+      }
+    } catch (err) {
+      setBookings([]);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju rezervacija.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleCancel = async (id) => {
-    setError("");
+    const confirmed = window.confirm(
+      "Da li ste sigurni da želite da otkažete ovu rezervaciju?",
+    );
 
-    if (
-      window.confirm("Da li ste sigurni da želite da otkažete ovu rezervaciju?")
-    ) {
+    if (!confirmed) return;
+
+    setError("");
+    setCancellingId(id);
+
+    try {
       const result = await cancelBooking(id);
 
-      if (result.success) {
+      if (result?.success) {
         await loadBookings();
       } else {
-        setError(result.error || "Greška pri otkazivanju rezervacije");
+        setError(result?.error || "Greška pri otkazivanju rezervacije.");
       }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri otkazivanju rezervacije.",
+      );
+    } finally {
+      setCancellingId("");
     }
   };
 
   const handleWriteReview = (playroomId) => {
-    // Navigira na stranicu igraonice i skroluje do recenzija
-    navigate(`/playrooms/${playroomId}#reviews`);
-    // Mali delay da se stranica učita pa skrol
-    setTimeout(() => {
-      const element = document.getElementById("reviews-section");
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 500);
+    if (!playroomId) return;
+    navigate(`/playrooms/${playroomId}#reviews-section`);
   };
 
   const getStatusText = (status) => {
     const statusMap = {
-      cekiranje: {
+      cekanje: {
         text: "⏳ Čeka potvrdu",
         class: "status-pending",
         clickable: false,
@@ -74,13 +92,23 @@ const MyBookings = () => {
         clickable: false,
       },
       zavrseno: {
-        text: "🎉 Završeno - Klikni da ostaviš recenziju",
+        text: "🎉 Završeno - ostavi recenziju",
         class: "status-completed",
         clickable: true,
       },
     };
-    return statusMap[status] || { text: status, class: "", clickable: false };
+
+    return (
+      statusMap[status] || {
+        text: status || "Nepoznato",
+        class: "",
+        clickable: false,
+      }
+    );
   };
+
+  const canCancelBooking = (status) =>
+    status === "cekanje" || status === "potvrdjeno";
 
   if (loading) {
     return <div className="container loading">Učitavanje...</div>;
@@ -89,11 +117,14 @@ const MyBookings = () => {
   return (
     <div className="container my-bookings-page">
       <h1>📋 Moje rezervacije</h1>
+
       {error && <div className="error-message">{error}</div>}
+
       {bookings.length === 0 ? (
         <div className="empty-state">
           <p>Još nemate nijednu rezervaciju.</p>
           <button
+            type="button"
             className="btn-primary"
             onClick={() => navigate("/playrooms")}
           >
@@ -104,16 +135,22 @@ const MyBookings = () => {
         <div className="bookings-list">
           {bookings.map((booking) => {
             const status = getStatusText(booking.status);
+            const playroom =
+              typeof booking.playroomId === "object"
+                ? booking.playroomId
+                : null;
+            const playroomId = playroom?._id || booking.playroomId;
 
             return (
               <div key={booking._id} className="booking-card">
                 <div className="booking-header">
-                  <h3>{booking.playroomId?.naziv}</h3>
+                  <h3>{playroom?.naziv || "Igraonica"}</h3>
+
                   <span
-                    className={`status-badge ${status.class} ${status.clickable ? "clickable" : ""}`}
+                    className={`status-badge ${status.class} ${
+                      status.clickable ? "clickable" : ""
+                    }`}
                     onClick={() => {
-                      const playroomId =
-                        booking.playroomId?._id || booking.playroomId;
                       if (status.clickable && playroomId) {
                         handleWriteReview(playroomId);
                       }
@@ -121,34 +158,50 @@ const MyBookings = () => {
                     style={
                       status.clickable
                         ? { cursor: "pointer", textDecoration: "underline" }
-                        : {}
+                        : undefined
                     }
                   >
                     {status.text}
                   </span>
                 </div>
+
                 <div className="booking-details">
                   <p>
-                    📍 {booking.playroomId?.adresa}, {booking.playroomId?.grad}
+                    📍 {playroom?.adresa || "-"}
+                    {playroom?.grad ? `, ${playroom.grad}` : ""}
                   </p>
+
                   <p>
                     📅 Datum:{" "}
-                    {new Date(booking.datum).toLocaleDateString("sr-RS")}
+                    {booking.datum
+                      ? new Date(booking.datum).toLocaleDateString("sr-RS")
+                      : "-"}
                   </p>
+
                   <p>
-                    ⏰ Vreme: {booking.vremeOd} - {booking.vremeDo}
+                    ⏰ Vreme: {booking.vremeOd || "-"} -{" "}
+                    {booking.vremeDo || "-"}
                   </p>
+
                   <p>👶 Broj dece: {booking.brojDece || 1}</p>
-                  <p>💰 Ukupno: {booking.ukupnaCena} RSD</p>
+
+                  <p>👨‍👩‍👧 Broj roditelja: {booking.brojRoditelja || 0}</p>
+
+                  <p>💰 Ukupno: {booking.ukupnaCena || 0} RSD</p>
+
                   {booking.napomena && <p>📝 Napomena: {booking.napomena}</p>}
                 </div>
-                {(booking.status === "cekiranje" ||
-                  booking.status === "potvrdjeno") && (
+
+                {canCancelBooking(booking.status) && (
                   <button
+                    type="button"
                     className="btn-cancel"
                     onClick={() => handleCancel(booking._id)}
+                    disabled={cancellingId === booking._id}
                   >
-                    Otkaži rezervaciju
+                    {cancellingId === booking._id
+                      ? "Otkazujem..."
+                      : "Otkaži rezervaciju"}
                   </button>
                 )}
               </div>

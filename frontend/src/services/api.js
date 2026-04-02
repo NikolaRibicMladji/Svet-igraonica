@@ -1,16 +1,23 @@
 import axios from "axios";
 
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:5000/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
+    const token =
+      localStorage.getItem("accessToken") || localStorage.getItem("token");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -25,25 +32,45 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (
+      error.response.status === 401 &&
+      !originalRequest?._retry &&
+      !originalRequest?.url?.includes("/auth/login") &&
+      !originalRequest?.url?.includes("/auth/register") &&
+      !originalRequest?.url?.includes("/auth/refresh")
+    ) {
       originalRequest._retry = true;
 
       try {
-        const res = await axios.post(
-          "http://localhost:5000/api/auth/refresh",
+        const refreshResponse = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
           {},
           { withCredentials: true },
         );
 
-        const { accessToken } = res.data;
+        const accessToken = refreshResponse.data?.accessToken;
+
+        if (!accessToken) {
+          throw new Error("Novi access token nije vraćen.");
+        }
+
         localStorage.setItem("accessToken", accessToken);
 
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers = {
+          ...originalRequest.headers,
+          Authorization: `Bearer ${accessToken}`,
+        };
+
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("token");
         localStorage.removeItem("user");
-        window.location.href = "/login";
+
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+
         return Promise.reject(refreshError);
       }
     }

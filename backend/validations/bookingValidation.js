@@ -3,12 +3,20 @@ const { z } = require("zod");
 const createBookingSchema = z.object({
   slotId: z.string().min(1, "slotId je obavezan"),
 
-  ime: z.string().min(2, "Ime mora imati bar 2 karaktera"),
+  imeRoditelja: z.string().min(2, "Ime mora imati bar 2 karaktera").trim(),
+
+  prezimeRoditelja: z
+    .string()
+    .min(2, "Prezime mora imati bar 2 karaktera")
+    .trim(),
+
+  emailRoditelja: z.string().email("Neispravan email").toLowerCase().trim(),
 
   telefon: z
     .string()
     .min(6, "Telefon mora imati bar 6 cifara")
-    .regex(/^[0-9+ ]+$/, "Telefon može sadržati samo brojeve"),
+    .regex(/^[0-9+ ]+$/, "Telefon može sadržati samo brojeve")
+    .trim(),
 
   brojDece: z
     .number({
@@ -17,7 +25,13 @@ const createBookingSchema = z.object({
     .min(1, "Mora biti bar 1 dete")
     .max(50, "Previše dece"),
 
-  napomena: z.string().optional(),
+  brojRoditelja: z
+    .number()
+    .min(0, "Ne može biti negativno")
+    .max(50, "Previše roditelja")
+    .optional(),
+
+  napomena: z.string().max(500).optional(),
 });
 
 module.exports = {

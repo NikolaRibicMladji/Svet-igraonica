@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Link,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
@@ -22,72 +23,73 @@ import OwnerTimeSlots from "./pages/OwnerTimeSlots";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import "./styles/global.css";
 
-// ============================================
-// KOMPONENTE ZA ZAŠTITU RUTA
-// ============================================
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { user, isAuthenticated, loading } = useAuth();
 
-// Zaštita - samo vlasnici i admini
-const VlasnikRoute = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+  if (loading) {
+    return <div className="container loading">Učitavanje...</div>;
   }
 
-  if (user?.role !== "vlasnik" && user?.role !== "admin") {
-    return <Navigate to="/" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (
+    Array.isArray(allowedRoles) &&
+    allowedRoles.length > 0 &&
+    !allowedRoles.includes(user?.role)
+  ) {
+    return <Navigate to="/" replace />;
   }
 
   return children;
 };
 
-// Zaštita - samo admini
-const AdminRoute = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+const VlasnikRoute = ({ children }) => (
+  <ProtectedRoute allowedRoles={["vlasnik", "admin"]}>
+    {children}
+  </ProtectedRoute>
+);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
+const AdminRoute = ({ children }) => (
+  <ProtectedRoute allowedRoles={["admin"]}>{children}</ProtectedRoute>
+);
 
-  if (user?.role !== "admin") {
-    return <Navigate to="/" />;
-  }
+const RoditeljRoute = ({ children }) => (
+  <ProtectedRoute allowedRoles={["roditelj", "admin"]}>
+    {children}
+  </ProtectedRoute>
+);
 
-  return children;
-};
-
-// Zaštita - samo roditelji i admini
-const RoditeljRoute = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
-  if (user?.role !== "roditelj" && user?.role !== "admin") {
-    return <Navigate to="/" />;
-  }
-
-  return children;
-};
-
-// ============================================
-// GLAVNA APP KOMPONENTA
-// ============================================
 function AppRoutes() {
-  const { user } = useAuth();
-
   return (
     <>
       <Navbar />
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/playrooms" element={<Playrooms />} />
         <Route path="/playrooms/:id" element={<PlayroomDetails />} />
-        <Route path="/book/:id" element={<Book />} />
-        <Route path="/booking-success" element={<BookingSuccess />} />
+
+        <Route
+          path="/book/:id"
+          element={
+            <RoditeljRoute>
+              <Book />
+            </RoditeljRoute>
+          }
+        />
+
+        <Route
+          path="/booking-success"
+          element={
+            <RoditeljRoute>
+              <BookingSuccess />
+            </RoditeljRoute>
+          }
+        />
 
         <Route
           path="/my-bookings"
@@ -106,6 +108,7 @@ function AppRoutes() {
             </VlasnikRoute>
           }
         />
+
         <Route
           path="/create-playroom"
           element={
@@ -114,10 +117,12 @@ function AppRoutes() {
             </VlasnikRoute>
           }
         />
+
         <Route
           path="/manage-slots"
           element={<Navigate to="/owner-slots" replace />}
         />
+
         <Route
           path="/owner-slots"
           element={
@@ -126,14 +131,13 @@ function AppRoutes() {
             </VlasnikRoute>
           }
         />
+
         <Route
           path="/vlasnik/dashboard"
           element={
-            user?.role === "vlasnik" ? (
+            <VlasnikRoute>
               <OwnerDashboard />
-            ) : (
-              <Navigate to="/login" />
-            )
+            </VlasnikRoute>
           }
         />
 
@@ -162,9 +166,6 @@ function App() {
   );
 }
 
-// ============================================
-// 404 STRANICA
-// ============================================
 const NotFound = () => {
   return (
     <div
@@ -174,13 +175,14 @@ const NotFound = () => {
       <h1 style={{ fontSize: "6rem", color: "#ff6b4a" }}>404</h1>
       <h2>Stranica nije pronađena</h2>
       <p>Izvinjavamo se, stranica koju tražite ne postoji.</p>
-      <a
-        href="/"
+
+      <Link
+        to="/"
         className="btn btn-primary"
         style={{ marginTop: "20px", display: "inline-block" }}
       >
         Vrati se na početnu
-      </a>
+      </Link>
     </div>
   );
 };

@@ -1,31 +1,53 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+
+const normalizeVideo = (video) => {
+  if (!video) return null;
+
+  return {
+    url: video.url || video.secure_url || video.path || "",
+    thumbnail: video.thumbnail || "",
+    naziv: video.naziv || "",
+  };
+};
 
 const VideoPlayer = ({ video }) => {
+  const normalizedVideo = useMemo(() => normalizeVideo(video), [video]);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  console.log("VideoPlayer renderovan", video);
-
-  if (!video || !video.url) {
-    console.log("Nema videa ili URL");
+  if (!normalizedVideo || !normalizedVideo.url) {
     return null;
   }
+
+  const handlePlay = () => {
+    setIsPlaying(true);
+  };
 
   return (
     <div className="video-gallery-item">
       {!isPlaying ? (
         <div
           className="video-thumbnail"
-          onClick={() => {
-            console.log("Klik na video thumbnail");
-            setIsPlaying(true);
+          onClick={handlePlay}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              handlePlay();
+            }
           }}
+          aria-label={`Pokreni video ${normalizedVideo.naziv || "video"}`}
           style={{ cursor: "pointer" }}
         >
-          {video.thumbnail ? (
-            <img src={video.thumbnail} alt={video.naziv} />
+          {normalizedVideo.thumbnail ? (
+            <img
+              src={normalizedVideo.thumbnail}
+              alt={normalizedVideo.naziv || "Video thumbnail"}
+              loading="lazy"
+            />
           ) : (
             <div className="video-placeholder">🎬</div>
           )}
+
           <div className="play-button-overlay">
             <div className="play-icon">▶</div>
           </div>
@@ -33,13 +55,14 @@ const VideoPlayer = ({ video }) => {
       ) : (
         <video
           controls
-          className="video-player-inline"
           autoPlay
-          src={video.url}
+          className="video-player-inline"
+          src={normalizedVideo.url}
           style={{ width: "100%", aspectRatio: "16/9" }}
         />
       )}
-      <div className="video-title">{video.naziv || "Video"}</div>
+
+      <div className="video-title">{normalizedVideo.naziv || "Video"}</div>
     </div>
   );
 };

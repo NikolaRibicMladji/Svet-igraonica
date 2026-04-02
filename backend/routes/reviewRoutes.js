@@ -1,17 +1,27 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+
+const { protect } = require("../middleware/authMiddleware");
+const authorize = require("../middleware/roleMiddleware");
+const ROLES = require("../constants/roles");
+
 const {
   addReview,
   getReviews,
-  deleteReview
-} = require('../controllers/reviewController');
+  deleteReview,
+} = require("../controllers/reviewController");
 
-// Javne rute
-router.get('/:playroomId', getReviews);
+// 🌐 JAVNO
+router.get("/:playroomId", getReviews);
 
-// Privatne rute
-router.post('/:playroomId', protect, addReview);
-router.delete('/:id', protect, deleteReview);
+// 🔒 PRIVATNO
+router.post(
+  "/:playroomId",
+  protect,
+  authorize(ROLES.RODITELJ, ROLES.ADMIN),
+  addReview,
+);
+
+router.delete("/:id", protect, deleteReview);
 
 module.exports = router;

@@ -1,45 +1,124 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "../styles/CreatePlayroom.css";
 
-const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
-  const [formData, setFormData] = useState({
-    naziv: initialData?.naziv || "",
-    adresa: initialData?.adresa || "",
-    grad: initialData?.grad || "",
-    opis: initialData?.opis || "",
-    kontaktTelefon: initialData?.kontaktTelefon || "",
-    kontaktEmail: initialData?.kontaktEmail || "",
-    kapacitet: {
-      deca: initialData?.kapacitet?.deca || "",
-      roditelji: initialData?.kapacitet?.roditelji || "",
-    },
-    osnovnaCena: initialData?.osnovnaCena || "",
-  });
+const DEFAULT_RADNO_VREME = {
+  ponedeljak: { od: "09:00", do: "20:00", radi: true },
+  utorak: { od: "09:00", do: "20:00", radi: true },
+  sreda: { od: "09:00", do: "20:00", radi: true },
+  cetvrtak: { od: "09:00", do: "20:00", radi: true },
+  petak: { od: "09:00", do: "20:00", radi: true },
+  subota: { od: "10:00", do: "22:00", radi: true },
+  nedelja: { od: "10:00", do: "21:00", radi: true },
+};
 
-  const [cene, setCene] = useState(initialData?.cene || []);
+const DEFAULT_DRUSTVENE_MREZE = {
+  instagram: "",
+  facebook: "",
+  tiktok: "",
+  website: "",
+};
+
+const DEFAULT_CENA_RODITELJA = {
+  tip: "ne_naplacuje",
+  iznos: "",
+};
+
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
+
+const getAuthToken = () =>
+  localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
+
+const toNumberOrZero = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const sanitizeText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const normalizeImageItem = (item) => {
+  if (!item) return null;
+
+  if (typeof item === "string") {
+    return { url: item };
+  }
+
+  return {
+    ...item,
+    url: item.url || item.secure_url || item.path || "",
+  };
+};
+
+const normalizeVideoItem = (item) => {
+  if (!item) return null;
+
+  return {
+    ...item,
+    url: item.url || item.secure_url || item.path || "",
+    publicId: item.publicId || item.public_id || "",
+    thumbnail: item.thumbnail || "",
+    naziv: item.naziv || "",
+    trajanje: Number(item.trajanje || item.duration || 0),
+  };
+};
+
+const PlayroomForm = ({
+  initialData,
+  onSubmit,
+  onCancel,
+  isEditing = false,
+}) => {
+  const initialFormData = useMemo(
+    () => ({
+      naziv: initialData?.naziv || "",
+      adresa: initialData?.adresa || "",
+      grad: initialData?.grad || "",
+      opis: initialData?.opis || "",
+      kontaktTelefon: initialData?.kontaktTelefon || "",
+      kontaktEmail: initialData?.kontaktEmail || "",
+      kapacitet: {
+        deca: initialData?.kapacitet?.deca || "",
+        roditelji: initialData?.kapacitet?.roditelji || "",
+      },
+      osnovnaCena: initialData?.osnovnaCena || "",
+    }),
+    [initialData],
+  );
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [cene, setCene] = useState(
+    Array.isArray(initialData?.cene) ? initialData.cene : [],
+  );
   const [novaCena, setNovaCena] = useState({
     naziv: "",
     cena: "",
     opis: "",
     tip: "fiksno",
   });
+
   const [videoGalerija, setVideoGalerija] = useState(
-    initialData?.videoGalerija || [],
+    Array.isArray(initialData?.videoGalerija)
+      ? initialData.videoGalerija
+          .map(normalizeVideoItem)
+          .filter((item) => item?.url)
+      : [],
   );
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [noviVideo, setNoviVideo] = useState(null);
   const [videoNaziv, setVideoNaziv] = useState("");
+
   const [error, setError] = useState("");
-  const [paketi, setPaketi] = useState(initialData?.paketi || []);
-  const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
-  const [cenaRoditelja, setCenaRoditelja] = useState(
-    initialData?.cenaRoditelja || {
-      tip: "ne_naplacuje",
-      iznos: "",
-    },
+  const [paketi, setPaketi] = useState(
+    Array.isArray(initialData?.paketi) ? initialData.paketi : [],
   );
+  const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
+
+  const [cenaRoditelja, setCenaRoditelja] = useState(
+    initialData?.cenaRoditelja || DEFAULT_CENA_RODITELJA,
+  );
+
   const [dodatneUsluge, setDodatneUsluge] = useState(
-    initialData?.dodatneUsluge || [],
+    Array.isArray(initialData?.dodatneUsluge) ? initialData.dodatneUsluge : [],
   );
   const [novaUsluga, setNovaUsluga] = useState({
     naziv: "",
@@ -49,77 +128,90 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
   });
 
   const [besplatnePogodnosti, setBesplatnePogodnosti] = useState(
-    initialData?.besplatnePogodnosti || [],
+    Array.isArray(initialData?.besplatnePogodnosti)
+      ? initialData.besplatnePogodnosti
+      : [],
   );
   const [novaPogodnost, setNovaPogodnost] = useState("");
 
   const [profilnaSlika, setProfilnaSlika] = useState(
-    initialData?.profilnaSlika || null,
+    normalizeImageItem(initialData?.profilnaSlika),
   );
-  const [slike, setSlike] = useState(initialData?.slike || []);
+  const [slike, setSlike] = useState(
+    Array.isArray(initialData?.slike)
+      ? initialData.slike.map(normalizeImageItem).filter((item) => item?.url)
+      : [],
+  );
   const [uploading, setUploading] = useState(false);
-  const [drustveneMreze, setDrustveneMreze] = useState(
-    initialData?.drustveneMreze || {
-      instagram: "",
-      facebook: "",
-      tiktok: "",
-      website: "",
-    },
-  );
-  const [radnoVreme, setRadnoVreme] = useState(
-    initialData?.radnoVreme || {
-      ponedeljak: { od: "09:00", do: "20:00", radi: true },
-      utorak: { od: "09:00", do: "20:00", radi: true },
-      sreda: { od: "09:00", do: "20:00", radi: true },
-      cetvrtak: { od: "09:00", do: "20:00", radi: true },
-      petak: { od: "09:00", do: "20:00", radi: true },
-      subota: { od: "10:00", do: "22:00", radi: true },
-      nedelja: { od: "10:00", do: "21:00", radi: true },
-    },
-  );
+
+  const [drustveneMreze, setDrustveneMreze] = useState({
+    ...DEFAULT_DRUSTVENE_MREZE,
+    ...(initialData?.drustveneMreze || {}),
+  });
+
+  const [radnoVreme, setRadnoVreme] = useState({
+    ...DEFAULT_RADNO_VREME,
+    ...(initialData?.radnoVreme || {}),
+  });
+
+  useEffect(() => {
+    setFormData(initialFormData);
+  }, [initialFormData]);
 
   const handleCenaRoditeljaChange = (e) => {
     const { name, value } = e.target;
-    setCenaRoditelja((prev) => ({ ...prev, [name]: value }));
+    setCenaRoditelja((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "tip" && value === "ne_naplacuje" ? { iznos: "" } : {}),
+    }));
   };
 
   const uploadVideo = async (file) => {
+    if (!file) return;
+
     if (videoGalerija.length >= 3) {
-      alert("Maksimalno 3 video snimka mogu biti dodata!");
+      setError("Maksimalno 3 video snimka mogu biti dodata.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("video", file);
+    const formDataUpload = new FormData();
+    formDataUpload.append("video", file);
+
     setUploadingVideo(true);
+    setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/upload/video", {
+      const response = await fetch(`${API_BASE_URL}/api/upload/video`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${getAuthToken()}`,
         },
-        body: formData,
+        body: formDataUpload,
       });
-      console.log("Odgovor:", response);
+
       const data = await response.json();
-      console.log("Podaci:", data);
-      if (data.success) {
-        setVideoGalerija([
-          ...videoGalerija,
-          {
-            url: data.data.url,
-            publicId: data.data.publicId,
-            thumbnail: data.data.thumbnail || "",
-            naziv: videoNaziv || `Video ${videoGalerija.length + 1}`,
-            trajanje: data.data.duration || 0,
-          },
-        ]);
-        setNoviVideo(null);
-        setVideoNaziv("");
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.message || "Greška pri uploadu videa.");
       }
-    } catch (error) {
-      console.error("Greška pri uploadu videa:", error);
+
+      setVideoGalerija((prev) => [
+        ...prev,
+        {
+          url: data.data.url,
+          publicId: data.data.publicId || data.data.public_id || "",
+          thumbnail: data.data.thumbnail || "",
+          naziv: sanitizeText(videoNaziv) || `Video ${prev.length + 1}`,
+          trajanje: Number(data.data.duration || 0),
+        },
+      ]);
+
+      setNoviVideo(null);
+      setVideoNaziv("");
+    } catch (err) {
+      console.error("Greška pri uploadu videa:", err);
+      setError(err.message || "Upload videa nije uspeo.");
     } finally {
       setUploadingVideo(false);
     }
@@ -131,24 +223,28 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
   };
 
   const handleVideoChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       setNoviVideo(file);
     }
   };
 
   const handleAddVideo = () => {
-    if (noviVideo) {
-      uploadVideo(noviVideo);
+    if (!noviVideo) {
+      setError("Izaberi video fajl.");
+      return;
     }
+
+    uploadVideo(noviVideo);
   };
 
   const handleRemoveVideo = (index) => {
-    setVideoGalerija(videoGalerija.filter((_, i) => i !== index));
+    setVideoGalerija((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
       setFormData((prev) => ({
@@ -158,12 +254,13 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
           [child]: value,
         },
       }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      return;
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleRadnoVremeChange = (dan, tip, value) => {
@@ -187,73 +284,92 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
   };
 
   const handleAddCena = () => {
-    if (novaCena.naziv.trim() && novaCena.cena) {
-      setCene([
-        ...cene,
-        {
-          naziv: novaCena.naziv.trim(),
-          cena: parseInt(novaCena.cena),
-          tip: novaCena.tip || "fiksno",
-          opis: novaCena.opis || "",
-        },
-      ]);
-      setNovaCena({ naziv: "", cena: "", opis: "", tip: "fiksno" });
-    }
+    const naziv = sanitizeText(novaCena.naziv);
+    const cena = Number(novaCena.cena);
+
+    if (!naziv || !Number.isFinite(cena) || cena <= 0) return;
+
+    setCene((prev) => [
+      ...prev,
+      {
+        naziv,
+        cena,
+        tip: novaCena.tip || "fiksno",
+        opis: sanitizeText(novaCena.opis),
+      },
+    ]);
+
+    setNovaCena({ naziv: "", cena: "", opis: "", tip: "fiksno" });
   };
 
   const handleRemoveCena = (index) => {
-    setCene(cene.filter((_, i) => i !== index));
+    setCene((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddPaket = () => {
-    if (noviPaket.naziv.trim() && noviPaket.cena) {
-      setPaketi([
-        ...paketi,
-        {
-          naziv: noviPaket.naziv.trim(),
-          cena: parseInt(noviPaket.cena),
-          opis: noviPaket.opis || "",
-        },
-      ]);
-      setNoviPaket({ naziv: "", cena: "", opis: "" });
-    }
+    const naziv = sanitizeText(noviPaket.naziv);
+    const cena = Number(noviPaket.cena);
+
+    if (!naziv || !Number.isFinite(cena) || cena <= 0) return;
+
+    setPaketi((prev) => [
+      ...prev,
+      {
+        naziv,
+        cena,
+        opis: sanitizeText(noviPaket.opis),
+      },
+    ]);
+
+    setNoviPaket({ naziv: "", cena: "", opis: "" });
   };
 
   const handleRemovePaket = (index) => {
-    setPaketi(paketi.filter((_, i) => i !== index));
+    setPaketi((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddUsluga = () => {
-    if (novaUsluga.naziv.trim() && novaUsluga.cena) {
-      setDodatneUsluge([
-        ...dodatneUsluge,
-        {
-          naziv: novaUsluga.naziv.trim(),
-          cena: parseInt(novaUsluga.cena),
-          opis: novaUsluga.opis || "",
-          tip: novaUsluga.tip,
-        },
-      ]);
-      setNovaUsluga({ naziv: "", cena: "", opis: "", tip: "fiksno" });
-    }
+    const naziv = sanitizeText(novaUsluga.naziv);
+    const cena = Number(novaUsluga.cena);
+
+    if (!naziv || !Number.isFinite(cena) || cena <= 0) return;
+
+    setDodatneUsluge((prev) => [
+      ...prev,
+      {
+        naziv,
+        cena,
+        opis: sanitizeText(novaUsluga.opis),
+        tip: novaUsluga.tip || "fiksno",
+      },
+    ]);
+
+    setNovaUsluga({ naziv: "", cena: "", opis: "", tip: "fiksno" });
   };
 
   const handleRemoveUsluga = (index) => {
-    setDodatneUsluge(dodatneUsluge.filter((_, i) => i !== index));
+    setDodatneUsluge((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddPogodnost = () => {
-    if (novaPogodnost.trim()) {
-      setBesplatnePogodnosti([...besplatnePogodnosti, novaPogodnost.trim()]);
+    const vrednost = sanitizeText(novaPogodnost);
+    if (!vrednost) return;
+    if (besplatnePogodnosti.includes(vrednost)) {
       setNovaPogodnost("");
+      return;
     }
+
+    setBesplatnePogodnosti((prev) => [...prev, vrednost]);
+    setNovaPogodnost("");
   };
 
   const handleRemovePogodnost = (index) => {
-    setBesplatnePogodnosti(besplatnePogodnosti.filter((_, i) => i !== index));
+    setBesplatnePogodnosti((prev) => prev.filter((_, i) => i !== index));
   };
 
   const uploadImage = async (file, isProfilna = false) => {
+    if (!file) return;
+
     const formDataUpload = new FormData();
     formDataUpload.append("image", file);
 
@@ -261,86 +377,147 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/upload/temp", {
+      const response = await fetch(`${API_BASE_URL}/api/temp-upload`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          Authorization: `Bearer ${getAuthToken()}`,
         },
         body: formDataUpload,
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Greška pri uploadu slike");
+      if (!response.ok || !data.success) {
+        throw new Error(data?.message || "Greška pri uploadu slike.");
       }
 
-      if (data.success) {
-        if (isProfilna) {
-          setProfilnaSlika(data.data);
-        } else {
-          setSlike((prev) => [...prev, data.data]);
-        }
+      if (isProfilna) {
+        setProfilnaSlika(data.data);
+      } else {
+        setSlike((prev) => [...prev, data.data]);
       }
-    } catch (error) {
-      console.error("Greška pri uploadu:", error);
-      setError(error.message || "Upload slike nije uspeo");
+    } catch (err) {
+      console.error("Greška pri uploadu slike:", err);
+      setError(err.message || "Upload slike nije uspeo.");
     } finally {
       setUploading(false);
     }
   };
 
   const handleFileChange = (e, isProfilna = false) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       uploadImage(file, isProfilna);
     }
   };
 
   const removeImage = (index) => {
-    setSlike(slike.filter((_, i) => i !== index));
+    setSlike((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeProfilna = () => {
     setProfilnaSlika(null);
   };
 
+  const validateForm = () => {
+    if (!sanitizeText(formData.naziv)) return "Naziv igraonice je obavezan.";
+    if (!sanitizeText(formData.adresa)) return "Adresa je obavezna.";
+    if (!sanitizeText(formData.grad)) return "Grad je obavezan.";
+    if (!sanitizeText(formData.opis)) return "Opis je obavezan.";
+    if (!sanitizeText(formData.kontaktTelefon))
+      return "Kontakt telefon je obavezan.";
+    if (!sanitizeText(formData.kontaktEmail))
+      return "Kontakt email je obavezan.";
+
+    const kapacitetDece = Number(formData.kapacitet.deca);
+    if (!Number.isFinite(kapacitetDece) || kapacitetDece < 1) {
+      return "Kapacitet dece mora biti najmanje 1.";
+    }
+
+    const osnovnaCena = Number(formData.osnovnaCena);
+    if (!Number.isFinite(osnovnaCena) || osnovnaCena < 0) {
+      return "Osnovna cena mora biti validan broj.";
+    }
+
+    if (
+      cenaRoditelja.tip !== "ne_naplacuje" &&
+      (!Number.isFinite(Number(cenaRoditelja.iznos)) ||
+        Number(cenaRoditelja.iznos) < 0)
+    ) {
+      return "Cena za roditelje mora biti validan broj.";
+    }
+
+    for (const [dan, vreme] of Object.entries(radnoVreme)) {
+      if (vreme?.radi && vreme.od && vreme.do && vreme.od >= vreme.do) {
+        return `Radno vreme nije ispravno za dan: ${dan}.`;
+      }
+    }
+
+    return "";
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
+
+    const validationMessage = validateForm();
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
 
     const submitData = {
       ...formData,
+      naziv: sanitizeText(formData.naziv),
+      adresa: sanitizeText(formData.adresa),
+      grad: sanitizeText(formData.grad),
+      opis: sanitizeText(formData.opis),
+      kontaktTelefon: sanitizeText(formData.kontaktTelefon),
+      kontaktEmail: sanitizeText(formData.kontaktEmail),
       kapacitet: {
-        deca: parseInt(formData.kapacitet.deca),
+        deca: toNumberOrZero(formData.kapacitet.deca),
         roditelji: formData.kapacitet.roditelji
-          ? parseInt(formData.kapacitet.roditelji)
+          ? toNumberOrZero(formData.kapacitet.roditelji)
           : 0,
       },
-      osnovnaCena: parseInt(formData.osnovnaCena),
-      cene: cene,
-      paketi: paketi,
-      dodatneUsluge: dodatneUsluge,
-      besplatnePogodnosti: besplatnePogodnosti,
-      profilnaSlika: profilnaSlika,
-      slike: slike,
-      videoGalerija: videoGalerija,
-      drustveneMreze: drustveneMreze,
-      cenaRoditelja: cenaRoditelja,
+      osnovnaCena: toNumberOrZero(formData.osnovnaCena),
+      cene,
+      paketi,
+      dodatneUsluge,
+      besplatnePogodnosti,
+      profilnaSlika,
+      slike,
+      videoGalerija,
+      drustveneMreze: {
+        instagram: sanitizeText(drustveneMreze.instagram),
+        facebook: sanitizeText(drustveneMreze.facebook),
+        tiktok: sanitizeText(drustveneMreze.tiktok),
+        website: sanitizeText(drustveneMreze.website),
+      },
+      cenaRoditelja: {
+        tip: cenaRoditelja.tip,
+        iznos:
+          cenaRoditelja.tip === "ne_naplacuje"
+            ? 0
+            : toNumberOrZero(cenaRoditelja.iznos),
+      },
       radnoVreme: {},
     };
 
     for (const [dan, vreme] of Object.entries(radnoVreme)) {
       if (vreme.radi) {
-        submitData.radnoVreme[dan] = { od: vreme.od, do: vreme.do, radi: true };
+        submitData.radnoVreme[dan] = {
+          od: vreme.od,
+          do: vreme.do,
+          radi: true,
+        };
       } else {
-        submitData.radnoVreme[dan] = { radi: false };
+        submitData.radnoVreme[dan] = {
+          radi: false,
+        };
       }
     }
 
-    console.log("Šaljem podatke:", {
-      ...submitData,
-      videoGalerija: videoGalerija,
-    });
     onSubmit(submitData);
   };
 
@@ -358,7 +535,8 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
     <form onSubmit={handleSubmit} className="edit-form full-form">
       <h2>{isEditing ? "✏️ Uredi igraonicu" : "✨ Dodaj novu igraonicu"}</h2>
 
-      {/* Osnovni podaci */}
+      {error && <div className="error-message">{error}</div>}
+
       <div className="form-section">
         <h3>📋 Osnovni podaci</h3>
         <div className="form-group">
@@ -371,6 +549,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             required
           />
         </div>
+
         <div className="form-row">
           <div className="form-group">
             <label>Adresa *</label>
@@ -382,6 +561,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               required
             />
           </div>
+
           <div className="form-group">
             <label>Grad *</label>
             <input
@@ -393,6 +573,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             />
           </div>
         </div>
+
         <div className="form-group">
           <label>Opis *</label>
           <textarea
@@ -403,6 +584,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             required
           />
         </div>
+
         <div className="form-row">
           <div className="form-group">
             <label>Kontakt telefon *</label>
@@ -414,6 +596,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               required
             />
           </div>
+
           <div className="form-group">
             <label>Kontakt email *</label>
             <input
@@ -427,7 +610,6 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Kapacitet */}
       <div className="form-section">
         <h3>👥 Kapacitet</h3>
         <div className="form-row">
@@ -435,16 +617,19 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             <label>Kapacitet dece *</label>
             <input
               type="number"
+              min="1"
               name="kapacitet.deca"
               value={formData.kapacitet.deca}
               onChange={handleChange}
               required
             />
           </div>
+
           <div className="form-group">
             <label>Kapacitet roditelja (opciono)</label>
             <input
               type="number"
+              min="0"
               name="kapacitet.roditelji"
               value={formData.kapacitet.roditelji}
               onChange={handleChange}
@@ -454,9 +639,9 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Slike */}
       <div className="form-section">
         <h3>🖼️ Slike</h3>
+
         <div className="form-group">
           <label>Profilna slika</label>
           <input
@@ -465,15 +650,16 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             onChange={(e) => handleFileChange(e, true)}
             disabled={uploading}
           />
-          {profilnaSlika && (
+          {profilnaSlika?.url && (
             <div className="uploaded-image">
-              <img src={profilnaSlika.url} alt="Profilna" />
+              <img src={profilnaSlika.url} alt="Profilna slika" />
               <button type="button" onClick={removeProfilna}>
                 ✖ Ukloni
               </button>
             </div>
           )}
         </div>
+
         <div className="form-group">
           <label>Ostale slike (maks. 10)</label>
           <input
@@ -482,9 +668,13 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             onChange={(e) => handleFileChange(e, false)}
             disabled={slike.length >= 10 || uploading}
           />
+
           <div className="image-list">
             {slike.map((img, idx) => (
-              <div key={idx} className="image-item">
+              <div
+                key={img.publicId || img.public_id || img.url || idx}
+                className="image-item"
+              >
                 <img src={img.url} alt={`Slika ${idx + 1}`} />
                 <button type="button" onClick={() => removeImage(idx)}>
                   ✖
@@ -492,15 +682,17 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               </div>
             ))}
           </div>
-          {slike.length >= 10 && <p className="warning">Maksimalno 10 slika</p>}
+
+          {slike.length >= 10 && (
+            <p className="warning">Maksimalno 10 slika.</p>
+          )}
         </div>
       </div>
 
-      {/* Video galerija */}
       <div className="form-section">
         <h3>🎥 Video galerija (maks. 3)</h3>
         <p className="section-hint">
-          Dodajte video snimke sa rođendana, događaja ili prikaza igraonice
+          Dodaj video snimke sa rođendana, događaja ili prikaza igraonice.
         </p>
 
         <div className="dynamic-input">
@@ -511,12 +703,14 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               value={videoNaziv}
               onChange={(e) => setVideoNaziv(e.target.value)}
             />
+
             <input
               type="file"
               accept="video/*"
               onChange={handleVideoChange}
               disabled={uploadingVideo || videoGalerija.length >= 3}
             />
+
             <button
               type="button"
               onClick={handleAddVideo}
@@ -524,7 +718,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
                 !noviVideo || uploadingVideo || videoGalerija.length >= 3
               }
             >
-              {uploadingVideo ? "Upload..." : "+ Dodaj video"}
+              {uploadingVideo ? "Uploadujem..." : "+ Dodaj video"}
             </button>
           </div>
 
@@ -532,7 +726,10 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             <div className="videos-list">
               <h4>Postavljeni video snimci:</h4>
               {videoGalerija.map((video, idx) => (
-                <div key={idx} className="video-item-preview">
+                <div
+                  key={video.publicId || video.url || idx}
+                  className="video-item-preview"
+                >
                   <div className="video-preview">
                     <video
                       controls
@@ -541,7 +738,9 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
                       style={{ width: "200px", borderRadius: "8px" }}
                     />
                     <div className="video-info">
-                      <span className="video-name">{video.naziv}</span>
+                      <span className="video-name">
+                        {video.naziv || `Video ${idx + 1}`}
+                      </span>
                       {video.trajanje > 0 && (
                         <span className="video-duration">
                           {Math.floor(video.trajanje / 60)}:
@@ -564,19 +763,19 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
 
           {videoGalerija.length >= 3 && (
             <p className="warning">
-              Maksimalan broj video snimaka (3) je dostignut.
+              Maksimalan broj video snimaka je dostignut.
             </p>
           )}
         </div>
       </div>
 
-      {/* Osnovna cena */}
       <div className="form-section">
         <h3>💰 Osnovna cena</h3>
         <div className="form-group">
           <label>Osnovna cena po detetu (RSD) *</label>
           <input
             type="number"
+            min="0"
             name="osnovnaCena"
             value={formData.osnovnaCena}
             onChange={handleChange}
@@ -585,11 +784,10 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Cena za roditelje */}
       <div className="form-section">
         <h3>👨‍👩‍👧 Cena za roditelje</h3>
         <p className="section-hint">
-          Odredite da li se naplaćuje ulaz za roditelje
+          Odredi da li se naplaćuje ulaz za roditelje.
         </p>
 
         <div className="form-group">
@@ -612,6 +810,7 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             <label>Cena (RSD)</label>
             <input
               type="number"
+              min="0"
               name="iznos"
               value={cenaRoditelja.iznos}
               onChange={handleCenaRoditeljaChange}
@@ -619,20 +818,19 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             />
             <small className="price-hint">
               {cenaRoditelja.tip === "fiksno"
-                ? "Ova cena se dodaje jednom"
-                : "Ova cena se množi sa brojem roditelja"}
+                ? "Ova cena se dodaje jednom."
+                : "Ova cena se množi sa brojem roditelja."}
             </small>
           </div>
         )}
       </div>
 
-      {/* Ostale cene */}
       <div className="form-section">
         <h3>💰 Ostale cene</h3>
         <p className="section-hint">
-          Dodajte dodatne cene (npr. "Produženo vreme", "Vikend", "Cena po
-          roditelju"...)
+          Dodaj dodatne cene, na primer produženo vreme ili vikend cenu.
         </p>
+
         <div className="dynamic-input">
           <div className="add-item">
             <input
@@ -640,21 +838,22 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               placeholder="Naziv"
               value={novaCena.naziv}
               onChange={(e) =>
-                setNovaCena({ ...novaCena, naziv: e.target.value })
+                setNovaCena((prev) => ({ ...prev, naziv: e.target.value }))
               }
             />
             <input
               type="number"
+              min="0"
               placeholder="Cena (RSD)"
               value={novaCena.cena}
               onChange={(e) =>
-                setNovaCena({ ...novaCena, cena: e.target.value })
+                setNovaCena((prev) => ({ ...prev, cena: e.target.value }))
               }
             />
             <select
               value={novaCena.tip || "fiksno"}
               onChange={(e) =>
-                setNovaCena({ ...novaCena, tip: e.target.value })
+                setNovaCena((prev) => ({ ...prev, tip: e.target.value }))
               }
               style={{ flex: 1 }}
             >
@@ -666,17 +865,18 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               placeholder="Opis"
               value={novaCena.opis}
               onChange={(e) =>
-                setNovaCena({ ...novaCena, opis: e.target.value })
+                setNovaCena((prev) => ({ ...prev, opis: e.target.value }))
               }
             />
             <button type="button" onClick={handleAddCena}>
               + Dodaj
             </button>
           </div>
+
           {cene.length > 0 && (
             <div className="items-list">
               {cene.map((item, idx) => (
-                <div key={idx} className="item">
+                <div key={`${item.naziv}-${idx}`} className="item">
                   <span>
                     <strong>{item.naziv}</strong> - {item.cena} RSD
                     {item.tip === "po_osobi" && (
@@ -696,7 +896,6 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Paketi */}
       <div className="form-section">
         <h3>🎁 Paketi</h3>
         <div className="dynamic-input">
@@ -706,15 +905,16 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               placeholder="Naziv paketa"
               value={noviPaket.naziv}
               onChange={(e) =>
-                setNoviPaket({ ...noviPaket, naziv: e.target.value })
+                setNoviPaket((prev) => ({ ...prev, naziv: e.target.value }))
               }
             />
             <input
               type="number"
+              min="0"
               placeholder="Cena (RSD)"
               value={noviPaket.cena}
               onChange={(e) =>
-                setNoviPaket({ ...noviPaket, cena: e.target.value })
+                setNoviPaket((prev) => ({ ...prev, cena: e.target.value }))
               }
             />
             <input
@@ -722,17 +922,18 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               placeholder="Opis"
               value={noviPaket.opis}
               onChange={(e) =>
-                setNoviPaket({ ...noviPaket, opis: e.target.value })
+                setNoviPaket((prev) => ({ ...prev, opis: e.target.value }))
               }
             />
             <button type="button" onClick={handleAddPaket}>
               + Dodaj paket
             </button>
           </div>
+
           {paketi.length > 0 && (
             <div className="items-list">
               {paketi.map((item, idx) => (
-                <div key={idx} className="item">
+                <div key={`${item.naziv}-${idx}`} className="item">
                   <span>
                     <strong>{item.naziv}</strong> - {item.cena} RSD
                   </span>
@@ -749,7 +950,6 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Dodatne usluge */}
       <div className="form-section">
         <h3>🎪 Dodatne usluge</h3>
         <div className="dynamic-input">
@@ -759,21 +959,22 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               placeholder="Naziv usluge"
               value={novaUsluga.naziv}
               onChange={(e) =>
-                setNovaUsluga({ ...novaUsluga, naziv: e.target.value })
+                setNovaUsluga((prev) => ({ ...prev, naziv: e.target.value }))
               }
             />
             <input
               type="number"
+              min="0"
               placeholder="Cena (RSD)"
               value={novaUsluga.cena}
               onChange={(e) =>
-                setNovaUsluga({ ...novaUsluga, cena: e.target.value })
+                setNovaUsluga((prev) => ({ ...prev, cena: e.target.value }))
               }
             />
             <select
               value={novaUsluga.tip}
               onChange={(e) =>
-                setNovaUsluga({ ...novaUsluga, tip: e.target.value })
+                setNovaUsluga((prev) => ({ ...prev, tip: e.target.value }))
               }
             >
               <option value="fiksno">Fiksna cena</option>
@@ -784,17 +985,18 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               placeholder="Opis"
               value={novaUsluga.opis}
               onChange={(e) =>
-                setNovaUsluga({ ...novaUsluga, opis: e.target.value })
+                setNovaUsluga((prev) => ({ ...prev, opis: e.target.value }))
               }
             />
             <button type="button" onClick={handleAddUsluga}>
               + Dodaj
             </button>
           </div>
+
           {dodatneUsluge.length > 0 && (
             <div className="items-list">
               {dodatneUsluge.map((item, idx) => (
-                <div key={idx} className="item">
+                <div key={`${item.naziv}-${idx}`} className="item">
                   <span>
                     <strong>{item.naziv}</strong> - {item.cena} RSD
                   </span>
@@ -814,7 +1016,6 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Besplatne pogodnosti */}
       <div className="form-section">
         <h3>✨ Besplatne pogodnosti</h3>
         <div className="dynamic-input">
@@ -829,10 +1030,11 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
               + Dodaj
             </button>
           </div>
+
           {besplatnePogodnosti.length > 0 && (
             <div className="items-list">
               {besplatnePogodnosti.map((item, idx) => (
-                <div key={idx} className="item">
+                <div key={`${item}-${idx}`} className="item">
                   <span>✓ {item}</span>
                   <button
                     type="button"
@@ -847,12 +1049,9 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Društvene mreže */}
       <div className="form-section">
         <h3>🌐 Društvene mreže</h3>
-        <p className="section-hint">
-          Dodajte linkove ka vašim profilima (opciono)
-        </p>
+        <p className="section-hint">Dodaj linkove ka profilima ili sajtu.</p>
 
         <div className="form-group">
           <label>📸 Instagram</label>
@@ -899,7 +1098,6 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         </div>
       </div>
 
-      {/* Radno vreme */}
       <div className="form-section">
         <h3>⏰ Radno vreme</h3>
         {dani.map((dan) => (
@@ -907,16 +1105,17 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
             <label className="dan-checkbox">
               <input
                 type="checkbox"
-                checked={radnoVreme[dan.key].radi}
+                checked={Boolean(radnoVreme[dan.key]?.radi)}
                 onChange={() => toggleDan(dan.key)}
               />
               <span className="dan-naziv">{dan.naziv}</span>
             </label>
-            {radnoVreme[dan.key].radi && (
+
+            {radnoVreme[dan.key]?.radi ? (
               <div className="vreme-inputs">
                 <input
                   type="time"
-                  value={radnoVreme[dan.key].od}
+                  value={radnoVreme[dan.key]?.od || "09:00"}
                   onChange={(e) =>
                     handleRadnoVremeChange(dan.key, "od", e.target.value)
                   }
@@ -925,15 +1124,14 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
                 <span className="time-separator">-</span>
                 <input
                   type="time"
-                  value={radnoVreme[dan.key].do}
+                  value={radnoVreme[dan.key]?.do || "20:00"}
                   onChange={(e) =>
                     handleRadnoVremeChange(dan.key, "do", e.target.value)
                   }
                   className="time-input"
                 />
               </div>
-            )}
-            {!radnoVreme[dan.key].radi && (
+            ) : (
               <span className="closed-text">Zatvoreno</span>
             )}
           </div>
@@ -944,8 +1142,18 @@ const PlayroomForm = ({ initialData, onSubmit, onCancel, isEditing }) => {
         <button type="button" className="btn-cancel" onClick={onCancel}>
           Otkaži
         </button>
-        <button type="submit" className="btn-submit" disabled={uploading}>
-          {uploading ? "Upload slika..." : "💾 Sačuvaj promene"}
+        <button
+          type="submit"
+          className="btn-submit"
+          disabled={uploading || uploadingVideo}
+        >
+          {uploading
+            ? "Uploadujem slike..."
+            : uploadingVideo
+              ? "Uploadujem video..."
+              : isEditing
+                ? "💾 Sačuvaj promene"
+                : "✨ Kreiraj igraonicu"}
         </button>
       </div>
     </form>

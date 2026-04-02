@@ -1,34 +1,62 @@
 import api from "./api";
 
-// Dohvati sve neverifikovane igraonice
 export const getUnverifiedPlayrooms = async () => {
   try {
     const response = await api.get("/admin/playrooms/unverified");
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: response.data?.data || [],
+      count: response.data?.count || 0,
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri učitavanju neverifikovanih igraonica:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ||
+        "Greška pri učitavanju neverifikovanih igraonica.",
+    };
   }
 };
 
-// Verifikuj igraonicu
 export const verifyPlayroom = async (id) => {
   try {
-    const response = await api.put(`/playrooms/${id}/verify`);
-    return { success: true, data: response.data.data };
+    const response = await api.put(`/admin/playrooms/${id}/verify`);
+
+    return {
+      success: true,
+      data: response.data?.data || null,
+      message: response.data?.message || "Igraonica je uspešno verifikovana.",
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri verifikaciji igraonice:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Greška pri verifikaciji igraonice.",
+    };
   }
 };
 
-// Dohvati sve korisnike (samo admin)
 export const getAllUsers = async () => {
   try {
     const response = await api.get("/admin/users");
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: response.data?.data || [],
+      count: response.data?.count || 0,
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri učitavanju korisnika:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Greška pri učitavanju korisnika.",
+    };
   }
 };

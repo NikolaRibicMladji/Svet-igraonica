@@ -3,10 +3,10 @@ const Booking = require("../models/Booking");
 const BOOKING_STATUS = require("../constants/bookingStatus");
 
 const reserveSlot = async ({ slotId, user, payload }) => {
-  let slot;
+  let slot = null;
 
   try {
-    // 🔒 1. Spreči dupli booking
+    // 🔒 spreči dupli booking
     const existing = await Booking.findOne({
       timeSlotId: slotId,
       status: { $ne: BOOKING_STATUS.OTKAZANO },
@@ -18,19 +18,41 @@ const reserveSlot = async ({ slotId, user, payload }) => {
       throw error;
     }
 
-    // 🧾 2. Validacija podataka
-    if (!payload.imeRoditelja || !payload.telefon) {
-      const error = new Error("Nedostaju podaci");
+    // 🧾 validacija podataka
+    if (
+      !payload?.imeRoditelja ||
+      !payload?.prezimeRoditelja ||
+      !payload?.emailRoditelja ||
+      !payload?.telefon
+    ) {
+      const error = new Error("Nedostaju podaci za rezervaciju");
       error.statusCode = 400;
       throw error;
     }
 
-    // 🔐 3. Atomic lock slota
+    const brojDece = Number(payload.brojDece || 1);
+    const brojRoditelja = Number(payload.brojRoditelja || 0);
+
+    if (Number.isNaN(brojDece) || brojDece < 1) {
+      const error = new Error("Broj dece mora biti validan");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (Number.isNaN(brojRoditelja) || brojRoditelja < 0) {
+      const error = new Error("Broj roditelja mora biti validan");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 🔐 atomic lock slota
     slot = await TimeSlot.findOneAndUpdate(
       {
         _id: slotId,
         zauzeto: false,
         slobodno: { $gt: 0 },
+        aktivno: true,
+        vanRadnogVremena: false,
       },
       {
         $set: {
@@ -47,8 +69,15 @@ const reserveSlot = async ({ slotId, user, payload }) => {
       throw error;
     }
 
-    // ⏰ 4. Provera prošlog termina
-    if (new Date(slot.datum) < new Date()) {
+    // ⏰ prošli termin
+    const slotDateTime = new Date(slot.datum);
+    const [endHour, endMinute] = String(slot.vremeDo || "00:00")
+      .split(":")
+      .map((v) => parseInt(v, 10));
+
+    slotDateTime.setHours(endHour || 0, endMinute || 0, 0, 0);
+
+    if (slotDateTime <= new Date()) {
       await TimeSlot.findByIdAndUpdate(slot._id, {
         zauzeto: false,
         slobodno: slot.maxDece || 20,
@@ -59,29 +88,33 @@ const reserveSlot = async ({ slotId, user, payload }) => {
       throw error;
     }
 
-    // 📝 5. Kreiranje booking-a
+    // 💰 cena
+    const ukupnaCena = (slot.cena || 0) * brojDece;
+
+    // 📝 booking
     const booking = await Booking.create({
+      roditeljId: user?._id || null,
       playroomId: slot.playroomId,
       timeSlotId: slot._id,
       datum: slot.datum,
       vremeOd: slot.vremeOd,
       vremeDo: slot.vremeDo,
-      ukupnaCena: slot.cena || 0,
+      brojDece,
+      brojRoditelja,
+      ukupnaCena,
       status: BOOKING_STATUS.CEKANJE,
-
-      imeRoditelja: payload.imeRoditelja,
-      telefon: payload.telefon,
-      brojDece: payload.brojDece || 1,
       napomena: payload.napomena || "",
-
-      userId: user?._id || null,
+      imeRoditelja: payload.imeRoditelja,
+      prezimeRoditelja: payload.prezimeRoditelja,
+      emailRoditelja: payload.emailRoditelja,
+      telefonRoditelja: payload.telefon,
     });
 
     return booking;
   } catch (err) {
-    // 🔁 6. Rollback ako pukne
+    // 🔁 rollback
     if (slot) {
-      await TimeSlot.findByIdAndUpdate(slotId, {
+      await TimeSlot.findByIdAndUpdate(slot._id, {
         zauzeto: false,
         slobodno: slot.maxDece || 20,
       });

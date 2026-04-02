@@ -4,50 +4,92 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/OwnerDashboard.css";
 
 const OwnerDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [stats, setStats] = useState(null);
   const [myPlayrooms, setMyPlayrooms] = useState([]);
+  const [selectedPlayroomId, setSelectedPlayroomId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    if (!authLoading) {
+      fetchMyPlayrooms();
+    }
+  }, [authLoading]);
 
-        // 1. Učitaj moje igraonice
-        const resPlayrooms = await api.get("/playrooms/mine/my-playrooms");
-        const playrooms = resPlayrooms.data?.data || [];
-        setMyPlayrooms(playrooms);
+  useEffect(() => {
+    if (selectedPlayroomId) {
+      fetchStats(selectedPlayroomId);
+    } else {
+      setStats(null);
+    }
+  }, [selectedPlayroomId]);
 
-        // 2. Ako vlasnik nema nijednu igraonicu
-        if (playrooms.length === 0) {
-          setStats(null);
-          return;
-        }
+  const fetchMyPlayrooms = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-        // 3. Uzmi prvu igraonicu i učitaj statistiku
-        const firstPlayroom = playrooms[0];
-        const resStats = await api.get(`/playrooms/${firstPlayroom._id}/stats`);
-        setStats(resStats.data?.data || null);
-      } catch (err) {
-        console.error("Greška pri učitavanju dashboard-a:", err);
-        setError("Greška pri učitavanju podataka za dashboard");
-      } finally {
-        setLoading(false);
+      const resPlayrooms = await api.get("/playrooms/mine/my-playrooms");
+      const playrooms = Array.isArray(resPlayrooms.data?.data)
+        ? resPlayrooms.data.data
+        : [];
+
+      setMyPlayrooms(playrooms);
+
+      if (playrooms.length > 0) {
+        setSelectedPlayroomId(playrooms[0]._id);
+      } else {
+        setSelectedPlayroomId("");
+        setStats(null);
       }
-    };
+    } catch (err) {
+      console.error("Greška pri učitavanju igraonica:", err);
+      setError(
+        err?.response?.data?.message ||
+          "Greška pri učitavanju podataka za dashboard.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchDashboardData();
-  }, []);
+  const fetchStats = async (playroomId) => {
+    try {
+      setStatsLoading(true);
+      setError("");
 
-  if (loading) {
+      const resStats = await api.get(`/playrooms/${playroomId}/stats`);
+      setStats(resStats.data?.data || null);
+    } catch (err) {
+      console.error("Greška pri učitavanju statistike:", err);
+      setError(
+        err?.response?.data?.message ||
+          "Greška pri učitavanju statistike igraonice.",
+      );
+      setStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  if (authLoading || loading) {
     return <div className="loading-container">⏳ Učitavanje podataka...</div>;
   }
 
-  if (error) {
+  if (user?.role !== "vlasnik" && user?.role !== "admin") {
+    return (
+      <div className="dashboard-container">
+        <div className="error-message">
+          Ova stranica je dostupna samo vlasnicima igraonica.
+        </div>
+      </div>
+    );
+  }
+
+  if (error && myPlayrooms.length === 0) {
     return (
       <div className="dashboard-container">
         <div className="error-message">{error}</div>
@@ -59,7 +101,7 @@ const OwnerDashboard = () => {
     return (
       <div className="dashboard-container">
         <header className="dashboard-header">
-          <h2>Zdravo, {user?.ime} 👋</h2>
+          <h2>Zdravo, {user?.ime || "vlasniče"} 👋</h2>
         </header>
 
         <div className="empty-state">
@@ -70,48 +112,78 @@ const OwnerDashboard = () => {
     );
   }
 
+  const selectedPlayroom =
+    myPlayrooms.find((playroom) => playroom._id === selectedPlayroomId) ||
+    myPlayrooms[0];
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
-        <h2>Zdravo, {user?.ime} 👋</h2>
+        <h2>Zdravo, {user?.ime || "vlasniče"} 👋</h2>
         <p className="playroom-name">
-          📍 {stats?.playroomName || myPlayrooms[0]?.naziv}
+          📍{" "}
+          {stats?.playroomName || selectedPlayroom?.naziv || "Moja igraonica"}
         </p>
       </header>
 
-      <div className="stats-grid">
-        <div className="stat-card blue">
-          <span className="stat-icon">📊</span>
-          <div className="stat-info">
-            <h3>{stats?.totalBookings ?? 0}</h3>
-            <p>Ukupno rezervacija</p>
-          </div>
+      {myPlayrooms.length > 1 && (
+        <div className="dashboard-playroom-select">
+          <label htmlFor="dashboard-playroom-select">
+            Izaberite igraonicu:
+          </label>
+          <select
+            id="dashboard-playroom-select"
+            value={selectedPlayroomId}
+            onChange={(e) => setSelectedPlayroomId(e.target.value)}
+          >
+            {myPlayrooms.map((playroom) => (
+              <option key={playroom._id} value={playroom._id}>
+                {playroom.naziv}
+              </option>
+            ))}
+          </select>
         </div>
+      )}
 
-        <div className="stat-card green">
-          <span className="stat-icon">✅</span>
-          <div className="stat-info">
-            <h3>{stats?.confirmedBookings ?? 0}</h3>
-            <p>Potvrđene rezervacije</p>
-          </div>
-        </div>
+      {error && <div className="error-message">{error}</div>}
 
-        <div className="stat-card orange">
-          <span className="stat-icon">🎉</span>
-          <div className="stat-info">
-            <h3>{stats?.completedBookings ?? 0}</h3>
-            <p>Završene rezervacije</p>
+      {statsLoading ? (
+        <div className="loading-container">⏳ Učitavanje statistike...</div>
+      ) : (
+        <div className="stats-grid">
+          <div className="stat-card blue">
+            <span className="stat-icon">📊</span>
+            <div className="stat-info">
+              <h3>{stats?.totalBookings ?? 0}</h3>
+              <p>Ukupno rezervacija</p>
+            </div>
           </div>
-        </div>
 
-        <div className="stat-card purple">
-          <span className="stat-icon">💰</span>
-          <div className="stat-info">
-            <h3>{stats?.totalRevenue ?? 0} RSD</h3>
-            <p>Ukupna zarada</p>
+          <div className="stat-card green">
+            <span className="stat-icon">✅</span>
+            <div className="stat-info">
+              <h3>{stats?.confirmedBookings ?? 0}</h3>
+              <p>Potvrđene rezervacije</p>
+            </div>
+          </div>
+
+          <div className="stat-card orange">
+            <span className="stat-icon">🎉</span>
+            <div className="stat-info">
+              <h3>{stats?.completedBookings ?? 0}</h3>
+              <p>Završene rezervacije</p>
+            </div>
+          </div>
+
+          <div className="stat-card purple">
+            <span className="stat-icon">💰</span>
+            <div className="stat-info">
+              <h3>{stats?.totalRevenue ?? 0} RSD</h3>
+              <p>Ukupna zarada</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

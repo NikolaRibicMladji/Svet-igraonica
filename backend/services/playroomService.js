@@ -39,6 +39,17 @@ const verifyPlayroomAndGenerateSlots = async (playroomId) => {
     throw error;
   }
 
+  if (playroom.verifikovan && playroom.status === PLAYROOM_STATUS.AKTIVAN) {
+    return {
+      playroom,
+      slotResult: {
+        createdCount: 0,
+        existingCount: 0,
+        skippedDays: 0,
+      },
+    };
+  }
+
   playroom.verifikovan = true;
   playroom.status = PLAYROOM_STATUS.AKTIVAN;
   await playroom.save();

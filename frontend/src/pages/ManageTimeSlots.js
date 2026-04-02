@@ -1,34 +1,54 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyPlayrooms } from "../services/playroomService";
-import {
-  getTimeSlots,
-  createBooking,
-  getMyTimeSlots,
-} from "../services/bookingService";
+import { getTimeSlots, createBooking } from "../services/bookingService";
 import { useAuth } from "../context/AuthContext";
 import "../styles/ManageTimeSlots.css";
 
+const monthNames = [
+  "Januar",
+  "Februar",
+  "Mart",
+  "April",
+  "Maj",
+  "Jun",
+  "Jul",
+  "Avgust",
+  "Septembar",
+  "Oktobar",
+  "Novembar",
+  "Decembar",
+];
+
+const getTodayString = () => new Date().toISOString().split("T")[0];
+
 const ManageTimeSlots = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
   const [playrooms, setPlayrooms] = useState([]);
   const [selectedPlayroom, setSelectedPlayroom] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [selectedDate, setSelectedDate] = useState(getTodayString());
+
   const [timeSlots, setTimeSlots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
   const [brojDece, setBrojDece] = useState(1);
   const [napomena, setNapomena] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadPlayrooms();
-  }, []);
+    if (!authLoading) {
+      loadPlayrooms();
+    }
+  }, [authLoading]);
 
   useEffect(() => {
     if (selectedPlayroom) {
@@ -37,84 +57,186 @@ const ManageTimeSlots = () => {
   }, [selectedPlayroom, selectedDate]);
 
   const loadPlayrooms = async () => {
-    const result = await getMyPlayrooms();
-    if (result.success && result.data.length > 0) {
-      setPlayrooms(result.data);
-      setSelectedPlayroom(result.data[0]._id);
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await getMyPlayrooms();
+
+      if (
+        result?.success &&
+        Array.isArray(result.data) &&
+        result.data.length > 0
+      ) {
+        setPlayrooms(result.data);
+        setSelectedPlayroom((prev) => prev || result.data[0]._id);
+      } else {
+        setPlayrooms([]);
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju igraonica.",
+      );
+      setPlayrooms([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadTimeSlots = async () => {
-    setLoading(true);
-    const result = await getTimeSlots(selectedPlayroom, selectedDate);
-    if (result.success) {
-      setTimeSlots(result.data);
+    if (!selectedPlayroom) return;
+
+    setSlotsLoading(true);
+    setError("");
+    setSelectedSlot(null);
+    setShowModal(false);
+
+    try {
+      const result = await getTimeSlots(selectedPlayroom, selectedDate);
+
+      if (result?.success) {
+        setTimeSlots(Array.isArray(result.data) ? result.data : []);
+      } else {
+        setTimeSlots([]);
+        setError(result?.error || "Greška pri učitavanju termina.");
+      }
+    } catch (err) {
+      setTimeSlots([]);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju termina.",
+      );
+    } finally {
+      setSlotsLoading(false);
     }
-    setLoading(false);
+  };
+
+  const closeModal = () => {
+    if (submitting) return;
+    setShowModal(false);
+    setSelectedSlot(null);
+    setBrojDece(1);
+    setNapomena("");
   };
 
   const handleSlotClick = (slot) => {
+    if (!slot || slot.zauzeto || Number(slot.slobodno) === 0) return;
+
     setSelectedSlot(slot);
     setBrojDece(1);
     setNapomena("");
+    setError("");
     setShowModal(true);
   };
 
   const handleManualBook = async () => {
-    if (!selectedSlot) return;
+    if (!selectedSlot?._id) return;
+
+    const broj = Number(brojDece);
+    const maxDece = Number(selectedSlot.slobodno || selectedSlot.maxDece || 1);
+
+    if (!Number.isInteger(broj) || broj < 1) {
+      setError("Broj dece mora biti najmanje 1.");
+      return;
+    }
+
+    if (broj > maxDece) {
+      setError(`Maksimalan broj dece za ovaj termin je ${maxDece}.`);
+      return;
+    }
 
     setSubmitting(true);
-    const result = await createBooking({
-      playroomId: selectedPlayroom,
-      datum: selectedDate,
-      vremeOd: selectedSlot.vremeOd,
-      vremeDo: selectedSlot.vremeDo,
-      brojDece: brojDece,
-      napomena: `Ručna rezervacija: ${napomena}`,
-    });
+    setError("");
+    setMessage("");
 
-    if (result.success) {
-      setMessage("Termin je uspešno zauzet!");
-      setShowModal(false);
-      loadTimeSlots();
-      setTimeout(() => setMessage(""), 3000);
-    } else {
-      alert(result.error);
+    try {
+      const result = await createBooking({
+        slotId: selectedSlot._id,
+        timeSlotId: selectedSlot._id,
+        playroomId: selectedPlayroom,
+        datum: selectedDate,
+        vremeOd: selectedSlot.vremeOd,
+        vremeDo: selectedSlot.vremeDo,
+        brojDece: broj,
+        brojRoditelja: 0,
+        ime: user?.ime || "Ručna",
+        prezime: user?.prezime || "rezervacija",
+        email: user?.email || "manual@svetigraonica.local",
+        telefon: user?.telefon || "000000",
+        napomena: napomena.trim()
+          ? `Ručna rezervacija vlasnika: ${napomena.trim()}`
+          : "Ručna rezervacija vlasnika",
+      });
+
+      if (result?.success) {
+        setMessage("Termin je uspešno zauzet.");
+        closeModal();
+        await loadTimeSlots();
+
+        setTimeout(() => {
+          setMessage("");
+        }, 3000);
+      } else {
+        setError(result?.error || "Rezervacija nije uspela.");
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Rezervacija nije uspela.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const getSlotStatus = (slot) => {
-    if (slot.zauzeto)
+    if (slot?.zauzeto || Number(slot?.slobodno) === 0) {
       return { text: "ZAUZETO", class: "slot-booked", disabled: true };
+    }
+
     return { text: "SLOBODNO", class: "slot-free", disabled: false };
   };
 
-  // Generiši dane u mesecu za prikaz
+  const baseDate = useMemo(() => {
+    const [year, month] = selectedDate.split("-").map(Number);
+    return new Date(year, month - 1, 1);
+  }, [selectedDate]);
+
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
+
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
+
     const daysInMonth = lastDay.getDate();
     const startWeekday = firstDay.getDay();
 
     const days = [];
-    // Prazni dani na početku
-    for (let i = 0; i < (startWeekday === 0 ? 6 : startWeekday - 1); i++) {
+
+    for (let i = 0; i < (startWeekday === 0 ? 6 : startWeekday - 1); i += 1) {
       days.push(null);
     }
-    // Dani u mesecu
-    for (let i = 1; i <= daysInMonth; i++) {
+
+    for (let i = 1; i <= daysInMonth; i += 1) {
       days.push(i);
     }
+
     return days;
   };
 
   const getSlotsForDay = (day) => {
     if (!day) return [];
-    const dateStr = `${selectedDate.split("-")[0]}-${selectedDate.split("-")[1]}-${day.toString().padStart(2, "0")}`;
+
+    const year = baseDate.getFullYear();
+    const month = String(baseDate.getMonth() + 1).padStart(2, "0");
+    const dayString = String(day).padStart(2, "0");
+    const dateStr = `${year}-${month}-${dayString}`;
+
     return timeSlots.filter((slot) => {
       const slotDate = new Date(slot.datum).toISOString().split("T")[0];
       return slotDate === dateStr;
@@ -123,34 +245,37 @@ const ManageTimeSlots = () => {
 
   const hasAvailableSlot = (day) => {
     const slots = getSlotsForDay(day);
-    return slots.some((slot) => !slot.zauzeto);
+    return slots.some((slot) => !slot.zauzeto && Number(slot.slobodno) > 0);
   };
 
   const isFullyBooked = (day) => {
     const slots = getSlotsForDay(day);
-    return slots.length > 0 && slots.every((slot) => slot.zauzeto);
+    return (
+      slots.length > 0 &&
+      slots.every((slot) => slot.zauzeto || Number(slot.slobodno) === 0)
+    );
   };
 
   const changeMonth = (offset) => {
-    const newDate = new Date(selectedDate);
-    newDate.setMonth(newDate.getMonth() + offset);
-    setSelectedDate(newDate.toISOString().split("T")[0]);
+    const current = new Date(baseDate);
+    current.setMonth(current.getMonth() + offset);
+
+    const firstDayOfMonth = new Date(
+      current.getFullYear(),
+      current.getMonth(),
+      1,
+    );
+
+    setSelectedDate(firstDayOfMonth.toISOString().split("T")[0]);
   };
 
-  const monthNames = [
-    "Januar",
-    "Februar",
-    "Mart",
-    "April",
-    "Maj",
-    "Jun",
-    "Jul",
-    "Avgust",
-    "Septembar",
-    "Oktobar",
-    "Novembar",
-    "Decembar",
-  ];
+  if (authLoading || loading) {
+    return (
+      <div className="container">
+        <div className="loading">Učitavanje...</div>
+      </div>
+    );
+  }
 
   if (user?.role !== "vlasnik" && user?.role !== "admin") {
     return (
@@ -167,6 +292,7 @@ const ManageTimeSlots = () => {
         <h1>🏢 Nemate igraonicu</h1>
         <p>Prvo morate dodati igraonicu.</p>
         <button
+          type="button"
           className="btn-primary"
           onClick={() => navigate("/create-playroom")}
         >
@@ -176,16 +302,18 @@ const ManageTimeSlots = () => {
     );
   }
 
-  const currentDate = new Date(selectedDate);
+  const currentDate = baseDate;
   const days = getDaysInMonth(currentDate);
 
   return (
     <div className="container manage-slots-page">
       <div className="manage-slots-header">
         <h1>📅 Upravljanje terminima</h1>
+
         <div className="playroom-selector">
-          <label>Izaberite igraonicu:</label>
+          <label htmlFor="playroom-select">Izaberite igraonicu:</label>
           <select
+            id="playroom-select"
             value={selectedPlayroom}
             onChange={(e) => setSelectedPlayroom(e.target.value)}
           >
@@ -199,17 +327,27 @@ const ManageTimeSlots = () => {
       </div>
 
       {message && <div className="success-message">{message}</div>}
+      {error && <div className="error-message">{error}</div>}
 
-      {/* Kalendar */}
       <div className="calendar-container">
         <div className="calendar-header">
-          <button className="month-nav" onClick={() => changeMonth(-1)}>
+          <button
+            type="button"
+            className="month-nav"
+            onClick={() => changeMonth(-1)}
+          >
             ◀
           </button>
+
           <h2>
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
-          <button className="month-nav" onClick={() => changeMonth(1)}>
+
+          <button
+            type="button"
+            className="month-nav"
+            onClick={() => changeMonth(1)}
+          >
             ▶
           </button>
         </div>
@@ -232,23 +370,27 @@ const ManageTimeSlots = () => {
               );
             }
 
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+            const dayString = String(day).padStart(2, "0");
+            const dateStr = `${year}-${month}-${dayString}`;
+            const isSelected = selectedDate === dateStr;
+
             const hasSlots = getSlotsForDay(day).length > 0;
             const isAvailable = hasAvailableSlot(day);
             const isBooked = isFullyBooked(day);
 
             let dayClass = "calendar-day";
+            if (isSelected) dayClass += " selected";
             if (!hasSlots) dayClass += " no-slots";
             else if (isAvailable) dayClass += " available";
             else if (isBooked) dayClass += " booked";
 
             return (
               <div
-                key={day}
+                key={dateStr}
                 className={dayClass}
-                onClick={() => {
-                  const dateStr = `${selectedDate.split("-")[0]}-${selectedDate.split("-")[1]}-${day.toString().padStart(2, "0")}`;
-                  setSelectedDate(dateStr);
-                }}
+                onClick={() => setSelectedDate(dateStr)}
               >
                 <span className="day-number">{day}</span>
                 {hasSlots && (
@@ -262,11 +404,10 @@ const ManageTimeSlots = () => {
         </div>
       </div>
 
-      {/* Termini za izabrani dan */}
       <div className="selected-day-slots">
         <h3>Termini za {new Date(selectedDate).toLocaleDateString("sr-RS")}</h3>
 
-        {loading ? (
+        {slotsLoading ? (
           <div className="loading">Učitavanje termina...</div>
         ) : timeSlots.length === 0 ? (
           <div className="no-slots">
@@ -277,27 +418,31 @@ const ManageTimeSlots = () => {
           </div>
         ) : (
           <div className="slots-list">
-            {timeSlots.map((slot, idx) => {
+            {timeSlots.map((slot) => {
               const status = getSlotStatus(slot);
+
               return (
                 <div
-                  key={idx}
+                  key={slot._id}
                   className={`slot-card ${status.class}`}
-                  onClick={() => !slot.zauzeto && handleSlotClick(slot)}
+                  onClick={() => !status.disabled && handleSlotClick(slot)}
                 >
                   <div className="slot-time">
                     ⏰ {slot.vremeOd} - {slot.vremeDo}
                   </div>
+
                   <div className="slot-info">
                     <span>
                       👥 {slot.slobodno}/{slot.maxDece}
                     </span>
                     <span>💰 {slot.cena} RSD</span>
                   </div>
+
                   <div className={`slot-status ${status.class}`}>
                     {status.text}
                   </div>
-                  {slot.zauzeto && (
+
+                  {status.disabled && (
                     <div className="slot-booked-info">Rezervisano</div>
                   )}
                 </div>
@@ -307,66 +452,84 @@ const ManageTimeSlots = () => {
         )}
       </div>
 
-      {/* Modal za ručnu rezervaciju */}
       {showModal && selectedSlot && (
-        <div className="booking-modal" onClick={() => setShowModal(false)}>
+        <div className="booking-modal" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>📝 Ručna rezervacija</h3>
-              <button className="close-btn" onClick={() => setShowModal(false)}>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={closeModal}
+                disabled={submitting}
+              >
                 ✖
               </button>
             </div>
+
             <div className="modal-body">
               <p>
                 <strong>Termin:</strong> {selectedSlot.vremeOd} -{" "}
                 {selectedSlot.vremeDo}
               </p>
+
               <p>
                 <strong>Cena:</strong> {selectedSlot.cena} RSD
               </p>
 
               <div className="form-group">
-                <label>👶 Broj dece</label>
+                <label htmlFor="manual-booking-broj-dece">👶 Broj dece</label>
                 <input
+                  id="manual-booking-broj-dece"
                   type="number"
                   min="1"
                   max={selectedSlot.slobodno}
                   value={brojDece}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    const max = Number(selectedSlot.slobodno || 1);
                     setBrojDece(
-                      Math.min(
-                        selectedSlot.slobodno,
-                        parseInt(e.target.value) || 1,
-                      ),
-                    )
-                  }
+                      Number.isFinite(value) && value > 0
+                        ? Math.min(max, value)
+                        : 1,
+                    );
+                  }}
                 />
               </div>
 
               <div className="form-group">
-                <label>📝 Napomena (opciono)</label>
+                <label htmlFor="manual-booking-napomena">
+                  📝 Napomena (opciono)
+                </label>
                 <textarea
+                  id="manual-booking-napomena"
                   rows="3"
                   value={napomena}
                   onChange={(e) => setNapomena(e.target.value)}
-                  placeholder="Unesite dodatne informacije (npr. alergije, posebni zahtevi)"
+                  placeholder="Unesite dodatne informacije"
                 />
               </div>
 
               <div className="price-summary">
                 <span>Ukupno:</span>
-                <strong>{brojDece * selectedSlot.cena} RSD</strong>
+                <strong>
+                  {Number(brojDece) * Number(selectedSlot.cena || 0)} RSD
+                </strong>
               </div>
             </div>
+
             <div className="modal-footer">
               <button
+                type="button"
                 className="btn-cancel"
-                onClick={() => setShowModal(false)}
+                onClick={closeModal}
+                disabled={submitting}
               >
                 Otkaži
               </button>
+
               <button
+                type="button"
                 className="btn-confirm"
                 onClick={handleManualBook}
                 disabled={submitting}

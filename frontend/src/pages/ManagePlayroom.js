@@ -1,13 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyPlayrooms, updatePlayroom } from "../services/playroomService";
 import { useAuth } from "../context/AuthContext";
 import PlayroomForm from "../components/PlayroomForm";
 import "../styles/ManagePlayroom.css";
 
+const DAY_LABELS = {
+  ponedeljak: "Ponedeljak",
+  utorak: "Utorak",
+  sreda: "Sreda",
+  cetvrtak: "Četvrtak",
+  petak: "Petak",
+  subota: "Subota",
+  nedelja: "Nedelja",
+};
+
 const ManagePlayroom = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
   const [playroom, setPlayroom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -15,42 +26,85 @@ const ManagePlayroom = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadPlayroom();
-  }, []);
+    if (!authLoading) {
+      loadPlayroom();
+    }
+  }, [authLoading]);
 
   const loadPlayroom = async () => {
     setLoading(true);
     setError("");
-    const result = await getMyPlayrooms();
-    if (result.success && result.data.length > 0) {
-      setPlayroom(result.data[0]);
-    } else {
-      navigate("/create-playroom");
+
+    try {
+      const result = await getMyPlayrooms();
+
+      if (
+        result?.success &&
+        Array.isArray(result.data) &&
+        result.data.length > 0
+      ) {
+        setPlayroom(result.data[0]);
+      } else if (user?.role === "vlasnik" || user?.role === "admin") {
+        navigate("/create-playroom");
+      } else {
+        setPlayroom(null);
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju igraonice.",
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleUpdate = async (formData) => {
+    if (!playroom?._id) return;
+
     setError("");
-    const result = await updatePlayroom(playroom._id, formData);
-    if (result.success) {
-      setMessage("Podaci su uspešno ažurirani");
-      setEditing(false);
-      loadPlayroom();
-      setTimeout(() => setMessage(""), 3000);
-    } else {
-      setError(result.error || "Greška pri ažuriranju");
-      setTimeout(() => setError(""), 3000);
+    setMessage("");
+
+    try {
+      const result = await updatePlayroom(playroom._id, formData);
+
+      if (result?.success) {
+        setMessage(result?.message || "Podaci su uspešno ažurirani.");
+        setEditing(false);
+        await loadPlayroom();
+
+        setTimeout(() => {
+          setMessage("");
+        }, 3000);
+      } else {
+        setError(result?.error || "Greška pri ažuriranju.");
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri ažuriranju.",
+      );
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="container">
         <div className="loading-spinner">
           <div className="spinner"></div>
           <p>Učitavanje podataka...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (user?.role !== "vlasnik" && user?.role !== "admin") {
+    return (
+      <div className="container">
+        <h1>Pristup zabranjen</h1>
+        <p>Samo vlasnici igraonica mogu da upravljaju ovom stranicom.</p>
       </div>
     );
   }
@@ -73,7 +127,9 @@ const ManagePlayroom = () => {
 
       <div className="playroom-status">
         <div
-          className={`status-badge ${playroom.verifikovan ? "verified" : "pending"}`}
+          className={`status-badge ${
+            playroom.verifikovan ? "verified" : "pending"
+          }`}
         >
           {playroom.verifikovan ? (
             <>
@@ -95,7 +151,12 @@ const ManagePlayroom = () => {
             <div className="header-title">
               <h2>{playroom.naziv}</h2>
             </div>
-            <button className="btn-edit" onClick={() => setEditing(true)}>
+
+            <button
+              type="button"
+              className="btn-edit"
+              onClick={() => setEditing(true)}
+            >
               <span>✏️</span> Uredi podatke
             </button>
           </div>
@@ -107,18 +168,22 @@ const ManagePlayroom = () => {
                 {playroom.adresa}, {playroom.grad}
               </p>
             </div>
+
             <div className="detail-item">
               <label>📞 Telefon</label>
-              <p>{playroom.kontaktTelefon}</p>
+              <p>{playroom.kontaktTelefon || "-"}</p>
             </div>
+
             <div className="detail-item">
               <label>📧 Email</label>
-              <p>{playroom.kontaktEmail}</p>
+              <p>{playroom.kontaktEmail || "-"}</p>
             </div>
+
             <div className="detail-item">
               <label>👶 Kapacitet dece</label>
               <p>{playroom.kapacitet?.deca || 0} dece</p>
             </div>
+
             <div className="detail-item">
               <label>👨‍👩‍👧 Kapacitet roditelja</label>
               <p>
@@ -127,62 +192,86 @@ const ManagePlayroom = () => {
                   : "Neograničeno"}
               </p>
             </div>
+
             <div className="detail-item">
               <label>💰 Osnovna cena</label>
-              <p>{playroom.osnovnaCena} RSD / dete</p>
+              <p>{playroom.osnovnaCena || 0} RSD / dete</p>
             </div>
 
-            {/* Profilna slika */}
+            <div className="detail-item">
+              <label>👨‍👩‍👧 Cena za roditelje</label>
+              <p>
+                {!playroom.cenaRoditelja ||
+                playroom.cenaRoditelja.tip === "ne_naplacuje"
+                  ? "Ne naplaćuje se"
+                  : playroom.cenaRoditelja.tip === "fiksno"
+                    ? `${playroom.cenaRoditelja.iznos} RSD fiksno`
+                    : `${playroom.cenaRoditelja.iznos} RSD po roditelju`}
+              </p>
+            </div>
+
             {playroom.profilnaSlika?.url && (
               <div className="detail-item full-width">
                 <label>🖼️ Profilna slika</label>
                 <div className="profile-image">
-                  <img src={playroom.profilnaSlika.url} alt="Profilna" />
+                  <img src={playroom.profilnaSlika.url} alt="Profilna slika" />
                 </div>
               </div>
             )}
 
-            {/* Video galerija */}
-            {playroom.videoGalerija && playroom.videoGalerija.length > 0 && (
-              <div className="detail-item full-width">
-                <label>
-                  🎥 Video galerija ({playroom.videoGalerija.length})
-                </label>
-                <div className="videos-list-manage">
-                  {playroom.videoGalerija.map((video, idx) => (
-                    <div key={idx} className="video-manage-item">
-                      <video
-                        controls
-                        className="video-manage-player"
-                        src={video.url}
-                        style={{
-                          width: "200px",
-                          borderRadius: "8px",
-                          background: "#000",
-                        }}
-                      />
-                      <div className="video-manage-info">
-                        <span className="video-manage-name">{video.naziv}</span>
-                        {video.trajanje > 0 && (
-                          <span className="video-manage-duration">
-                            {Math.floor(video.trajanje / 60)}:
-                            {(video.trajanje % 60).toString().padStart(2, "0")}
+            {Array.isArray(playroom.videoGalerija) &&
+              playroom.videoGalerija.length > 0 && (
+                <div className="detail-item full-width">
+                  <label>
+                    🎥 Video galerija ({playroom.videoGalerija.length})
+                  </label>
+
+                  <div className="videos-list-manage">
+                    {playroom.videoGalerija.map((video, idx) => (
+                      <div
+                        key={
+                          video.publicId || video.public_id || video.url || idx
+                        }
+                        className="video-manage-item"
+                      >
+                        <video
+                          controls
+                          className="video-manage-player"
+                          src={video.url}
+                          style={{
+                            width: "200px",
+                            borderRadius: "8px",
+                            background: "#000",
+                          }}
+                        />
+                        <div className="video-manage-info">
+                          <span className="video-manage-name">
+                            {video.naziv || `Video ${idx + 1}`}
                           </span>
-                        )}
+                          {Number(video.trajanje) > 0 && (
+                            <span className="video-manage-duration">
+                              {Math.floor(Number(video.trajanje) / 60)}:
+                              {(Number(video.trajanje) % 60)
+                                .toString()
+                                .padStart(2, "0")}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Ostale slike */}
-            {playroom.slike && playroom.slike.length > 0 && (
+            {Array.isArray(playroom.slike) && playroom.slike.length > 0 && (
               <div className="detail-item full-width">
                 <label>📸 Galerija slika ({playroom.slike.length})</label>
                 <div className="gallery-images">
                   {playroom.slike.map((img, idx) => (
-                    <div key={idx} className="gallery-image">
+                    <div
+                      key={img.publicId || img.public_id || img.url || idx}
+                      className="gallery-image"
+                    >
                       <img src={img.url} alt={`Slika ${idx + 1}`} />
                     </div>
                   ))}
@@ -190,15 +279,19 @@ const ManagePlayroom = () => {
               </div>
             )}
 
-            {/* Ostale cene */}
-            {playroom.cene && playroom.cene.length > 0 && (
+            {Array.isArray(playroom.cene) && playroom.cene.length > 0 && (
               <div className="detail-item full-width">
                 <label>💰 Ostale cene</label>
                 <div className="items-list">
                   {playroom.cene.map((item, idx) => (
-                    <div key={idx} className="item-display">
+                    <div key={`${item.naziv}-${idx}`} className="item-display">
                       <span className="item-name">{item.naziv}</span>
                       <span className="item-price">{item.cena} RSD</span>
+                      {item.tip && (
+                        <span className="item-type">
+                          {item.tip === "po_osobi" ? "po osobi" : "fiksno"}
+                        </span>
+                      )}
                       {item.opis && (
                         <span className="item-opis">{item.opis}</span>
                       )}
@@ -208,13 +301,12 @@ const ManagePlayroom = () => {
               </div>
             )}
 
-            {/* Paketi */}
-            {playroom.paketi && playroom.paketi.length > 0 && (
+            {Array.isArray(playroom.paketi) && playroom.paketi.length > 0 && (
               <div className="detail-item full-width">
                 <label>🎁 Paketi</label>
                 <div className="items-list">
                   {playroom.paketi.map((item, idx) => (
-                    <div key={idx} className="item-display">
+                    <div key={`${item.naziv}-${idx}`} className="item-display">
                       <span className="item-name">{item.naziv}</span>
                       <span className="item-price">{item.cena} RSD</span>
                       {item.opis && (
@@ -226,35 +318,37 @@ const ManagePlayroom = () => {
               </div>
             )}
 
-            {/* Dodatne usluge */}
-            {playroom.dodatneUsluge && playroom.dodatneUsluge.length > 0 && (
-              <div className="detail-item full-width">
-                <label>🎪 Dodatne usluge</label>
-                <div className="items-list">
-                  {playroom.dodatneUsluge.map((item, idx) => (
-                    <div key={idx} className="item-display">
-                      <span className="item-name">{item.naziv}</span>
-                      <span className="item-price">{item.cena} RSD</span>
-                      <span className="item-type">
-                        {item.tip === "po_osobi" ? "po osobi" : "fiksno"}
-                      </span>
-                      {item.opis && (
-                        <span className="item-opis">{item.opis}</span>
-                      )}
-                    </div>
-                  ))}
+            {Array.isArray(playroom.dodatneUsluge) &&
+              playroom.dodatneUsluge.length > 0 && (
+                <div className="detail-item full-width">
+                  <label>🎪 Dodatne usluge</label>
+                  <div className="items-list">
+                    {playroom.dodatneUsluge.map((item, idx) => (
+                      <div
+                        key={`${item.naziv}-${idx}`}
+                        className="item-display"
+                      >
+                        <span className="item-name">{item.naziv}</span>
+                        <span className="item-price">{item.cena} RSD</span>
+                        <span className="item-type">
+                          {item.tip === "po_osobi" ? "po osobi" : "fiksno"}
+                        </span>
+                        {item.opis && (
+                          <span className="item-opis">{item.opis}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Besplatne pogodnosti */}
-            {playroom.besplatnePogodnosti &&
+            {Array.isArray(playroom.besplatnePogodnosti) &&
               playroom.besplatnePogodnosti.length > 0 && (
                 <div className="detail-item full-width">
                   <label>✨ Besplatne pogodnosti</label>
                   <div className="free-features-list">
                     {playroom.besplatnePogodnosti.map((item, idx) => (
-                      <span key={idx} className="free-badge">
+                      <span key={`${item}-${idx}`} className="free-badge">
                         ✓ {item}
                       </span>
                     ))}
@@ -262,7 +356,6 @@ const ManagePlayroom = () => {
                 </div>
               )}
 
-            {/* Društvene mreže */}
             {playroom.drustveneMreze && (
               <div className="detail-item full-width">
                 <label>🌐 Društvene mreže</label>
@@ -271,33 +364,40 @@ const ManagePlayroom = () => {
                     <a
                       href={playroom.drustveneMreze.instagram}
                       target="_blank"
+                      rel="noreferrer"
                       className="social-link-small instagram"
                     >
                       📸 Instagram
                     </a>
                   )}
+
                   {playroom.drustveneMreze.facebook && (
                     <a
                       href={playroom.drustveneMreze.facebook}
                       target="_blank"
+                      rel="noreferrer"
                       className="social-link-small facebook"
                     >
                       📘 Facebook
                     </a>
                   )}
+
                   {playroom.drustveneMreze.tiktok && (
                     <a
                       href={playroom.drustveneMreze.tiktok}
                       target="_blank"
+                      rel="noreferrer"
                       className="social-link-small tiktok"
                     >
                       🎵 TikTok
                     </a>
                   )}
+
                   {playroom.drustveneMreze.website && (
                     <a
                       href={playroom.drustveneMreze.website}
                       target="_blank"
+                      rel="noreferrer"
                       className="social-link-small website"
                     >
                       🌐 Veb sajt
@@ -307,34 +407,24 @@ const ManagePlayroom = () => {
               </div>
             )}
 
-            {/* Radno vreme */}
             <div className="detail-item full-width">
               <label>⏰ Radno vreme</label>
               <div className="working-hours">
                 {Object.entries(playroom.radnoVreme || {}).map(
-                  ([dan, vreme]) => {
-                    const dani = {
-                      ponedeljak: "Ponedeljak",
-                      utorak: "Utorak",
-                      sreda: "Sreda",
-                      cetvrtak: "Četvrtak",
-                      petak: "Petak",
-                      subota: "Subota",
-                      nedelja: "Nedelja",
-                    };
-                    return (
-                      <div key={dan} className="hour-row">
-                        <span className="day-name">{dani[dan]}:</span>
-                        {vreme?.radi === false ? (
-                          <span className="closed">Zatvoreno</span>
-                        ) : (
-                          <span className="hours">
-                            {vreme?.od || "09:00"} - {vreme?.do || "20:00"}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  },
+                  ([dan, vreme]) => (
+                    <div key={dan} className="hour-row">
+                      <span className="day-name">
+                        {DAY_LABELS[dan] || dan}:
+                      </span>
+                      {vreme?.radi === false ? (
+                        <span className="closed">Zatvoreno</span>
+                      ) : (
+                        <span className="hours">
+                          {vreme?.od || "09:00"} - {vreme?.do || "20:00"}
+                        </span>
+                      )}
+                    </div>
+                  ),
                 )}
               </div>
             </div>

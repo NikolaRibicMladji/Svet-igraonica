@@ -1,24 +1,34 @@
 const express = require("express");
 const router = express.Router();
-const { protect, vlasnik } = require("../middleware/authMiddleware");
+
+const { protect } = require("../middleware/authMiddleware");
+const authorize = require("../middleware/roleMiddleware");
+const ROLES = require("../constants/roles");
+
 const upload = require("../middleware/upload");
+
 const {
   uploadPlayroomImage,
   deletePlayroomImage,
 } = require("../controllers/uploadController");
-const videoController = require("../controllers/videoController");
 
-// Zaštita svih ruta
+const { uploadVideo } = require("../controllers/videoController");
+
+// 🔒 sve rute zahtevaju login + vlasnik/admin
 router.use(protect);
-router.use(vlasnik);
+router.use(authorize(ROLES.VLASNIK, ROLES.ADMIN));
 
-// Upload slike za igraonicu
+// 📸 upload slike
 router.post(
   "/playroom/:playroomId",
-  upload.single("image"),
+  upload.singleImage("image"),
   uploadPlayroomImage,
 );
+
+// 🗑 brisanje slike
 router.delete("/playroom/:playroomId/:imageUrl", deletePlayroomImage);
-router.post("/video", upload.single("video"), videoController.uploadVideo);
+
+// 🎥 upload video
+router.post("/video", upload.singleVideo("video"), uploadVideo);
 
 module.exports = router;

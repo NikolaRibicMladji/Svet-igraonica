@@ -1,10 +1,10 @@
-const validate = require("../middleware/validateMiddleware");
-const { createBookingSchema } = require("../validations/bookingValidation");
 const express = require("express");
 const router = express.Router();
-const TimeSlot = require("../models/TimeSlot");
-const Booking = require("../models/Booking");
+
 const { protect } = require("../middleware/authMiddleware");
+const validate = require("../middleware/validateMiddleware");
+const { createBookingSchema } = require("../validations/bookingValidation");
+
 const {
   createBooking,
   getMyBookings,
@@ -14,18 +14,18 @@ const {
   getBookingById,
 } = require("../controllers/bookingController");
 
-// Javna ruta - svi mogu da rezervišu
+// 🌐 JAVNO - rezervacija
 router.post("/", validate(createBookingSchema), createBooking);
 
-// Sve ostale rute traže prijavu
+// 🔒 sve ispod traži login
 router.use(protect);
 
-router.put("/:id/cancel", protect, cancelBooking);
-router.put("/:id/confirm", protect, confirmBooking);
-
+// 📦 BOOKINGS
 router.get("/my", getMyBookings);
 router.get("/owner", getOwnerBookings);
 router.get("/:id", getBookingById);
+
+// ✏️ AKCIJE
 router.put("/:id/cancel", cancelBooking);
 router.put("/:id/confirm", confirmBooking);
 

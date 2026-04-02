@@ -2,7 +2,6 @@ import api from "./api";
 
 // ============ TERMINI ============
 
-// Dohvati termine za igraonicu
 export const getTimeSlots = async (playroomId, datum = null) => {
   try {
     let url = `/timeslots/playroom/${playroomId}`;
@@ -12,138 +11,219 @@ export const getTimeSlots = async (playroomId, datum = null) => {
 
     const response = await api.get(url);
 
-    return { success: true, data: response.data.data };
+    return {
+      success: true,
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+    };
   } catch (error) {
     console.error("Greška pri dohvatanju termina:", error);
-    return { success: false, error: error.response?.data?.message };
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri dohvatanju termina.",
+    };
   }
 };
 
-// Kreiraj termin (vlasnik)
 export const createTimeSlot = async (data) => {
   try {
     const response = await api.post("/timeslots", data);
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: response.data?.data || null,
+      message: response.data?.message || "Termin je uspešno kreiran.",
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri kreiranju termina:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri kreiranju termina.",
+    };
   }
 };
 
-// Dohvati moje termine (vlasnik)
 export const getMyTimeSlots = async () => {
   try {
     const response = await api.get("/timeslots/my");
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri dohvatanju mojih termina:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri dohvatanju termina.",
+    };
   }
 };
 
-// Obriši termin (vlasnik)
 export const deleteTimeSlot = async (id) => {
   try {
     const response = await api.delete(`/timeslots/${id}`);
-    return { success: true, message: response.data.message };
+
+    return {
+      success: true,
+      message: response.data?.message || "Termin je uspešno obrisan.",
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri brisanju termina:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri brisanju termina.",
+    };
   }
 };
 
 // ============ REZERVACIJE ============
 
-// Kreiraj rezervaciju
 export const createBooking = async (data) => {
   try {
     const response = await api.post("/bookings", data);
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: response.data?.data || null,
+      message: response.data?.message || "Rezervacija je uspešno kreirana.",
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri kreiranju rezervacije:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Greška pri kreiranju rezervacije.",
+    };
   }
 };
 
-// Dohvati moje rezervacije (roditelj)
 export const getMyBookings = async () => {
   try {
     const response = await api.get("/bookings/my");
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri dohvatanju mojih rezervacija:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Greška pri dohvatanju rezervacija.",
+    };
   }
 };
 
-// Dohvati rezervacije za moje igraonice (vlasnik)
 export const getOwnerBookings = async () => {
   try {
     const response = await api.get("/bookings/owner");
-    return { success: true, data: response.data.data };
+
+    return {
+      success: true,
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri dohvatanju owner rezervacija:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Greška pri dohvatanju rezervacija.",
+    };
   }
 };
 
-// Otkaži rezervaciju
 export const cancelBooking = async (id) => {
   try {
     const response = await api.put(`/bookings/${id}/cancel`);
-    return { success: true, message: response.data.message };
+
+    return {
+      success: true,
+      message: response.data?.message || "Rezervacija je otkazana.",
+      data: response.data?.data || null,
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri otkazivanju rezervacije:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message || "Greška pri otkazivanju rezervacije.",
+    };
   }
 };
 
-// Potvrdi rezervaciju (vlasnik)
 export const confirmBooking = async (id) => {
   try {
     const response = await api.put(`/bookings/${id}/confirm`);
-    return { success: true, message: response.data.message };
+
+    return {
+      success: true,
+      message: response.data?.message || "Rezervacija je potvrđena.",
+      data: response.data?.data || null,
+    };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri potvrdi rezervacije:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri potvrdi rezervacije.",
+    };
   }
 };
 
-// Generiši termine za igraonicu
 export const generateTimeSlots = async (playroomId) => {
   try {
     const response = await api.post(`/timeslots/generate/${playroomId}`);
+
     return {
       success: true,
-      message: response.data.message,
-      data: response.data.data,
+      message: response.data?.message || "Termini su uspešno generisani.",
+      data: response.data?.data || null,
     };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri generisanju termina:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri generisanju termina.",
+    };
   }
 };
 
-// Dohvati sve termine za igraonicu (za vlasnika - vidi i slobodne i zauzete)
 export const getAllTimeSlotsForOwner = async (playroomId, datum = null) => {
   try {
     let url = `/timeslots/playroom/${playroomId}/all`;
     if (datum) {
       url += `?datum=${datum}`;
     }
+
     const response = await api.get(url);
+
     return {
       success: true,
-      data: response.data.data,
-      playroom: response.data.playroom,
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      playroom: response.data?.playroom || null,
     };
   } catch (error) {
-    console.error("Greška:", error);
-    return { success: false, error: error.response?.data?.message };
+    console.error("Greška pri dohvatanju svih termina za vlasnika:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ||
+        "Greška pri dohvatanju termina za vlasnika.",
+    };
   }
 };
 
-// Ručno zauzmi termin (vlasnik rezerviše)
 export const manualBookTimeSlot = async (timeSlotId, bookingData) => {
   try {
     const response = await api.post(
@@ -153,14 +233,17 @@ export const manualBookTimeSlot = async (timeSlotId, bookingData) => {
 
     return {
       success: true,
-      data: response.data.data,
-      message: response.data.message,
+      data: response.data?.data || null,
+      message: response.data?.message || "Termin je uspešno ručno zauzet.",
     };
   } catch (error) {
+    console.error("Greška pri ručnom zauzimanju termina:", error);
+
     return {
       success: false,
       error:
-        error.response?.data?.message || "Greška pri ručnom zauzimanju termina",
+        error.response?.data?.message ||
+        "Greška pri ručnom zauzimanju termina.",
     };
   }
 };

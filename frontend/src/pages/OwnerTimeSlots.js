@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyPlayrooms } from "../services/playroomService";
 import {
@@ -10,13 +10,14 @@ import ManualBookingModal from "../components/ManualBookingModal";
 import "../styles/OwnerTimeSlots.css";
 
 const OwnerTimeSlots = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [playrooms, setPlayrooms] = useState([]);
   const [selectedPlayroom, setSelectedPlayroom] = useState("");
   const [timeSlots, setTimeSlots] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingPlayrooms, setLoadingPlayrooms] = useState(true);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
   );
@@ -26,8 +27,10 @@ const OwnerTimeSlots = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadPlayrooms();
-  }, []);
+    if (!authLoading) {
+      loadPlayrooms();
+    }
+  }, [authLoading]);
 
   useEffect(() => {
     if (selectedPlayroom) {
@@ -36,51 +39,71 @@ const OwnerTimeSlots = () => {
   }, [selectedPlayroom, selectedDate]);
 
   const loadPlayrooms = async () => {
-    setLoading(true);
+    setLoadingPlayrooms(true);
     setError("");
     setMessage("");
 
-    const result = await getMyPlayrooms();
+    try {
+      const result = await getMyPlayrooms();
 
-    if (result.success && result.data.length > 0) {
-      setPlayrooms(result.data);
-      setSelectedPlayroom(result.data[0]._id);
-    } else {
+      if (
+        result?.success &&
+        Array.isArray(result.data) &&
+        result.data.length > 0
+      ) {
+        setPlayrooms(result.data);
+        setSelectedPlayroom((prev) => prev || result.data[0]._id);
+      } else {
+        setPlayrooms([]);
+        setSelectedPlayroom("");
+        setError("Nemate nijednu igraonicu. Prvo dodajte igraonicu.");
+      }
+    } catch (err) {
       setPlayrooms([]);
-      setError("Nemate nijednu igraonicu. Prvo dodajte igraonicu.");
+      setSelectedPlayroom("");
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju igraonica.",
+      );
+    } finally {
+      setLoadingPlayrooms(false);
     }
-
-    setLoading(false);
   };
 
   const loadTimeSlots = async () => {
     if (!selectedPlayroom) return;
 
-    setLoading(true);
+    setLoadingSlots(true);
     setError("");
     setMessage("");
 
-    const result = await getAllTimeSlotsForOwner(
-      selectedPlayroom,
-      selectedDate,
-    );
+    try {
+      const result = await getAllTimeSlotsForOwner(
+        selectedPlayroom,
+        selectedDate,
+      );
 
-    if (result.success) {
-      setTimeSlots(result.data || []);
-
-      if ((result.data || []).length === 0) {
-        setError("Nema termina za izabrani datum.");
+      if (result?.success) {
+        setTimeSlots(Array.isArray(result.data) ? result.data : []);
+      } else {
+        setTimeSlots([]);
+        setError(result?.error || "Greška pri učitavanju termina.");
       }
-    } else {
+    } catch (err) {
       setTimeSlots([]);
-      setError(result.error || "Greška pri učitavanju termina");
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju termina.",
+      );
+    } finally {
+      setLoadingSlots(false);
     }
-
-    setLoading(false);
   };
 
   const openManualBooking = (slot) => {
-    if (slot.zauzeto) return;
+    if (!slot || slot.zauzeto) return;
     setSelectedSlot(slot);
     setMessage("");
     setError("");
@@ -94,21 +117,34 @@ const OwnerTimeSlots = () => {
 
   const handleManualBooking = async (bookingData) => {
     if (!selectedSlot?._id) {
-      setError("Termin nije izabran");
+      setError("Termin nije izabran.");
       return;
     }
 
     setError("");
     setMessage("");
 
-    const result = await manualBookTimeSlot(selectedSlot._id, bookingData);
+    try {
+      const result = await manualBookTimeSlot(selectedSlot._id, bookingData);
 
-    if (result.success) {
-      setMessage(result.message || "Termin je uspešno zauzet");
-      closeManualBooking();
-      await loadTimeSlots();
-    } else {
-      setError(result.error || "Greška pri ručnom zauzimanju termina");
+      if (result?.success) {
+        setMessage(result.message || "Termin je uspešno zauzet.");
+        closeManualBooking();
+        await loadTimeSlots();
+
+        setTimeout(() => {
+          setMessage("");
+        }, 3000);
+      } else {
+        setError(result?.error || "Greška pri ručnom zauzimanju termina.");
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri ručnom zauzimanju termina.",
+      );
+      throw err;
     }
   };
 
@@ -116,8 +152,47 @@ const OwnerTimeSlots = () => {
     (p) => p._id === selectedPlayroom,
   );
 
-  if (loading && playrooms.length === 0) {
+  const formatBookingName = (booking) => {
+    if (!booking) return "-";
+
+    const ime =
+      booking.ime || booking.imeRoditelja || booking.parentFirstName || "";
+    const prezime =
+      booking.prezime ||
+      booking.prezimeRoditelja ||
+      booking.parentLastName ||
+      "";
+
+    const fullName = `${ime} ${prezime}`.trim();
+    return fullName || booking.userName || "-";
+  };
+
+  const formatBookingEmail = (booking) => {
+    return (
+      booking?.email || booking?.emailRoditelja || booking?.parentEmail || "-"
+    );
+  };
+
+  const formatBookingPhone = (booking) => {
+    return (
+      booking?.telefon ||
+      booking?.telefonRoditelja ||
+      booking?.parentPhone ||
+      "-"
+    );
+  };
+
+  if (authLoading || loadingPlayrooms) {
     return <div className="container loading">Učitavanje...</div>;
+  }
+
+  if (user?.role !== "vlasnik" && user?.role !== "admin") {
+    return (
+      <div className="container">
+        <h1>Pristup zabranjen</h1>
+        <p>Samo vlasnici igraonica mogu upravljati terminima.</p>
+      </div>
+    );
   }
 
   return (
@@ -134,6 +209,7 @@ const OwnerTimeSlots = () => {
         <div className="empty-state">
           <p>Nemate nijednu igraonicu.</p>
           <button
+            type="button"
             className="btn-primary"
             onClick={() => navigate("/create-playroom")}
           >
@@ -144,8 +220,9 @@ const OwnerTimeSlots = () => {
         <>
           <div className="filters-card">
             <div className="filter-group">
-              <label>Izaberite igraonicu</label>
+              <label htmlFor="owner-playroom-select">Izaberite igraonicu</label>
               <select
+                id="owner-playroom-select"
                 value={selectedPlayroom}
                 onChange={(e) => {
                   setSelectedPlayroom(e.target.value);
@@ -162,8 +239,9 @@ const OwnerTimeSlots = () => {
             </div>
 
             <div className="filter-group">
-              <label>Izaberite datum</label>
+              <label htmlFor="owner-date-select">Izaberite datum</label>
               <input
+                id="owner-date-select"
                 type="date"
                 value={selectedDate}
                 min={new Date().toISOString().split("T")[0]}
@@ -185,7 +263,7 @@ const OwnerTimeSlots = () => {
             </div>
           )}
 
-          {loading ? (
+          {loadingSlots ? (
             <div className="loading-slots">Učitavanje termina...</div>
           ) : timeSlots.length === 0 ? (
             <div className="empty-state">
@@ -203,33 +281,35 @@ const OwnerTimeSlots = () => {
                       {slot.vremeOd} - {slot.vremeDo}
                     </h3>
                     <span
-                      className={`slot-status ${slot.zauzeto ? "zauzeto" : "slobodno"}`}
+                      className={`slot-status ${
+                        slot.zauzeto ? "zauzeto" : "slobodno"
+                      }`}
                     >
                       {slot.zauzeto ? "ZAUZETO" : "SLOBODNO"}
                     </span>
                   </div>
 
                   <div className="slot-body">
-                    <p>💰 Cena: {slot.cena} RSD</p>
-                    <p>👶 Slobodno mesta: {slot.slobodno}</p>
+                    <p>💰 Cena: {slot.cena || 0} RSD</p>
+                    <p>👶 Slobodnih mesta: {slot.slobodno ?? 0}</p>
 
                     {slot.booking ? (
                       <div className="booking-info">
                         <h4>Rezervacija</h4>
+                        <p>👤 {formatBookingName(slot.booking)}</p>
+                        <p>📧 {formatBookingEmail(slot.booking)}</p>
+                        <p>📞 {formatBookingPhone(slot.booking)}</p>
+                        <p>👶 Broj dece: {slot.booking.brojDece || 0}</p>
                         <p>
-                          👤 {slot.booking.imeRoditelja}{" "}
-                          {slot.booking.prezimeRoditelja}
+                          👨‍👩‍👧 Broj roditelja: {slot.booking.brojRoditelja || 0}
                         </p>
-                        <p>📧 {slot.booking.emailRoditelja}</p>
-                        <p>📞 {slot.booking.telefonRoditelja}</p>
-                        <p>👶 Broj dece: {slot.booking.brojDece}</p>
-                        <p>👨‍👩‍👧 Broj roditelja: {slot.booking.brojRoditelja}</p>
                         {slot.booking.napomena && (
                           <p>📝 Napomena: {slot.booking.napomena}</p>
                         )}
                       </div>
                     ) : (
                       <button
+                        type="button"
                         className="btn-primary"
                         onClick={() => openManualBooking(slot)}
                         disabled={slot.zauzeto}

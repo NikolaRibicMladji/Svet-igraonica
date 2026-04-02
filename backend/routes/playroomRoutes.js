@@ -1,8 +1,11 @@
 const express = require("express");
+const router = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
 const authorize = require("../middleware/roleMiddleware");
 const checkOwner = require("../middleware/ownerMiddleware");
 const ROLES = require("../constants/roles");
-const router = express.Router();
+
 const {
   createPlayroom,
   getAllPlayrooms,
@@ -11,22 +14,35 @@ const {
   updatePlayroom,
   deletePlayroom,
   verifyPlayroom,
+  regenerateTimeSlots,
+  getOwnerStats,
 } = require("../controllers/playroomController");
-const playroomController = require("../controllers/playroomController");
-const { protect, vlasnik, admin } = require("../middleware/authMiddleware");
 
-// JAVNE RUTE
+// 🌐 JAVNE RUTE
 router.get("/", getAllPlayrooms);
 
-// PRIVATNE / SPECIFIČNE RUTE
-router.get("/mine/my-playrooms", protect, vlasnik, getMyPlayrooms);
-router.get("/:id/stats", protect, playroomController.getOwnerStats);
+// 🔒 PRIVATNE - vlasnik
+router.get(
+  "/mine/my-playrooms",
+  protect,
+  authorize(ROLES.VLASNIK),
+  getMyPlayrooms,
+);
 
-// JAVNA DINAMIČKA RUTA - MORA POSLE SPECIFIČNIH
+router.get(
+  "/:id/stats",
+  protect,
+  authorize(ROLES.VLASNIK),
+  checkOwner,
+  getOwnerStats,
+);
+
+// ⚠️ MORA POSLE SPECIFIČNIH
 router.get("/:id", getPlayroomById);
 
-// PRIVATNE CRUD RUTE
+// ✏️ CRUD
 router.post("/", protect, authorize(ROLES.VLASNIK), createPlayroom);
+
 router.put(
   "/:id",
   protect,
@@ -34,6 +50,7 @@ router.put(
   checkOwner,
   updatePlayroom,
 );
+
 router.delete(
   "/:id",
   protect,
@@ -41,6 +58,7 @@ router.delete(
   checkOwner,
   deletePlayroom,
 );
+
 router.post(
   "/:id/regenerate-slots",
   protect,
@@ -49,7 +67,7 @@ router.post(
   regenerateTimeSlots,
 );
 
-// ADMIN RUTA
-router.put("/:id/verify", protect, admin, verifyPlayroom);
+// 👑 ADMIN
+router.put("/:id/verify", protect, authorize(ROLES.ADMIN), verifyPlayroom);
 
 module.exports = router;

@@ -1,19 +1,40 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/BookingSuccess.css";
 
 const BookingSuccess = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="success-container">
       <div className="success-icon">✅</div>
-      <h1 className="success-title">Rezervacija uspešna!</h1>
+
+      <h1 className="success-title">Rezervacija je uspešno poslata!</h1>
+
       <p className="success-text">
-        Potvrda rezervacije je poslata na vaš email.
+        Vaša rezervacija je evidentirana u sistemu.
       </p>
+
+      <p className="success-text">
+        Potvrda i dalji status rezervacije biće poslati na vaš email ako je
+        igraonica potvrdi.
+      </p>
+
       <p className="success-text">Hvala vam što koristite Svet Igraonica!</p>
-      <Link to="/playrooms" className="success-button">
-        Pogledaj druge igraonice
-      </Link>
+
+      <div className="success-actions">
+        <button
+          type="button"
+          className="success-button secondary"
+          onClick={() => navigate("/my-bookings")}
+        >
+          Moje rezervacije
+        </button>
+
+        <Link to="/playrooms" className="success-button">
+          Pogledaj druge igraonice
+        </Link>
+      </div>
     </div>
   );
 };
