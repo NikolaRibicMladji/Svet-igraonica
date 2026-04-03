@@ -5,7 +5,7 @@ import "../styles/global.css";
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register, isAuthenticated, loading: authLoading } = useAuth();
+  const { register, isAuthenticated, user, loading: authLoading } = useAuth();
 
   const [formData, setFormData] = useState({
     ime: "",
@@ -23,9 +23,13 @@ const Register = () => {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate("/");
+      if (user?.role === "vlasnik") {
+        navigate("/create-playroom", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, user, navigate]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({

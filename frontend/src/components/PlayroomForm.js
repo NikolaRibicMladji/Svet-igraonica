@@ -26,6 +26,9 @@ const DEFAULT_CENA_RODITELJA = {
 const API_BASE_URL =
   process.env.REACT_APP_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
 
+const IMAGE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const VIDEO_MAX_SIZE = 50 * 1024 * 1024; // 50MB
+
 const getAuthToken = () =>
   localStorage.getItem("accessToken") || localStorage.getItem("token") || "";
 
@@ -104,7 +107,7 @@ const PlayroomForm = ({
       : [],
   );
   const [uploadingVideo, setUploadingVideo] = useState(false);
-  const [noviVideo, setNoviVideo] = useState(null);
+  const [noviVideo, setNoviVideo] = useState([]);
   const [videoNaziv, setVideoNaziv] = useState("");
 
   const [error, setError] = useState("");
@@ -168,53 +171,32 @@ const PlayroomForm = ({
   };
 
   const uploadVideo = async (file) => {
-    if (!file) return;
-
-    if (videoGalerija.length >= 3) {
-      setError("Maksimalno 3 video snimka mogu biti dodata.");
-      return;
-    }
+    if (!file) return null;
 
     const formDataUpload = new FormData();
     formDataUpload.append("video", file);
 
-    setUploadingVideo(true);
-    setError("");
+    const response = await fetch(`${API_BASE_URL}/api/upload/video`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: formDataUpload,
+    });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/upload/video`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
-        body: formDataUpload,
-      });
+    const data = await response.json();
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data?.message || "Greška pri uploadu videa.");
-      }
-
-      setVideoGalerija((prev) => [
-        ...prev,
-        {
-          url: data.data.url,
-          publicId: data.data.publicId || data.data.public_id || "",
-          thumbnail: data.data.thumbnail || "",
-          naziv: sanitizeText(videoNaziv) || `Video ${prev.length + 1}`,
-          trajanje: Number(data.data.duration || 0),
-        },
-      ]);
-
-      setNoviVideo(null);
-      setVideoNaziv("");
-    } catch (err) {
-      console.error("Greška pri uploadu videa:", err);
-      setError(err.message || "Upload videa nije uspeo.");
-    } finally {
-      setUploadingVideo(false);
+    if (!response.ok || !data.success) {
+      throw new Error(data?.message || "Greška pri uploadu videa.");
     }
+
+    return {
+      url: data.data.url,
+      publicId: data.data.publicId || data.data.public_id || "",
+      thumbnail: data.data.thumbnail || "",
+      naziv: sanitizeText(videoNaziv) || file.name || "Video",
+      trajanje: Number(data.data.duration || 0),
+    };
   };
 
   const handleDrustveneMrezeChange = (e) => {
@@ -223,19 +205,80 @@ const PlayroomForm = ({
   };
 
   const handleVideoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setNoviVideo(file);
-    }
-  };
+    const files = Array.from(e.target.files || []);
 
-  const handleAddVideo = () => {
-    if (!noviVideo) {
-      setError("Izaberi video fajl.");
+    if (!files.length) return;
+
+    const remainingSlots = Math.max(0, 3 - videoGalerija.length);
+
+    if (remainingSlots === 0) {
+      setError("Možete imati najviše 3 videa.");
+      e.target.value = "";
       return;
     }
 
-    uploadVideo(noviVideo);
+    const selectedFiles = files.slice(0, remainingSlots);
+    const validFiles = [];
+    const oversizedFiles = [];
+
+    for (const file of selectedFiles) {
+      if (file.size > VIDEO_MAX_SIZE) {
+        oversizedFiles.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (oversizedFiles.length > 0) {
+      setError(
+        `Ovi video fajlovi prelaze 50 MB: ${oversizedFiles.join(", ")}.`,
+      );
+    } else if (files.length > remainingSlots) {
+      setError(`Možete dodati još samo ${remainingSlots} video snimka.`);
+    } else {
+      setError("");
+    }
+
+    setNoviVideo(validFiles);
+    e.target.value = "";
+  };
+
+  const handleAddVideo = async () => {
+    if (!noviVideo.length) {
+      setError("Izaberi bar jedan video fajl.");
+      return;
+    }
+
+    if (videoGalerija.length >= 3) {
+      setError("Maksimalno 3 video snimka mogu biti dodata.");
+      return;
+    }
+
+    const remainingSlots = 3 - videoGalerija.length;
+    const filesToUpload = noviVideo.slice(0, remainingSlots);
+
+    setUploadingVideo(true);
+    setError("");
+
+    try {
+      const uploadedVideos = [];
+
+      for (const file of filesToUpload) {
+        const uploadedVideo = await uploadVideo(file);
+        if (uploadedVideo) {
+          uploadedVideos.push(uploadedVideo);
+        }
+      }
+
+      setVideoGalerija((prev) => [...prev, ...uploadedVideos]);
+      setNoviVideo([]);
+      setVideoNaziv("");
+    } catch (err) {
+      console.error("Greška pri uploadu videa:", err);
+      setError(err.message || "Upload videa nije uspeo.");
+    } finally {
+      setUploadingVideo(false);
+    }
   };
 
   const handleRemoveVideo = (index) => {
@@ -377,7 +420,7 @@ const PlayroomForm = ({
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/temp-upload`, {
+      const response = await fetch(`${API_BASE_URL}/api/temp-upload/temp`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
@@ -404,11 +447,49 @@ const PlayroomForm = ({
     }
   };
 
-  const handleFileChange = (e, isProfilna = false) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadImage(file, isProfilna);
+  const handleFileChange = async (e, isProfilna = false) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setError("");
+
+    if (isProfilna) {
+      const file = files[0];
+
+      if (file.size > IMAGE_MAX_SIZE) {
+        setError("Profilna slika ne sme biti veća od 10 MB.");
+        e.target.value = "";
+        return;
+      }
+
+      await uploadImage(file, true);
+      e.target.value = "";
+      return;
     }
+
+    if (slike.length >= 10) {
+      setError("Maksimalno 10 slika može biti dodato.");
+      e.target.value = "";
+      return;
+    }
+
+    const remainingSlots = 10 - slike.length;
+    const filesToUpload = files.slice(0, remainingSlots);
+
+    for (const file of filesToUpload) {
+      if (file.size > IMAGE_MAX_SIZE) {
+        setError(`Slika "${file.name}" je veća od 10 MB.`);
+        continue;
+      }
+
+      await uploadImage(file, false);
+    }
+
+    if (files.length > remainingSlots) {
+      setError(`Možete dodati još samo ${remainingSlots} slika.`);
+    }
+
+    e.target.value = "";
   };
 
   const removeImage = (index) => {
@@ -644,6 +725,7 @@ const PlayroomForm = ({
 
         <div className="form-group">
           <label>Profilna slika</label>
+          <small className="upload-hint">Maks. 10 MB po slici</small>
           <input
             type="file"
             accept="image/*"
@@ -662,9 +744,11 @@ const PlayroomForm = ({
 
         <div className="form-group">
           <label>Ostale slike (maks. 10)</label>
+          <small className="upload-hint">Maks. 10 MB po slici</small>
           <input
             type="file"
             accept="image/*"
+            multiple
             onChange={(e) => handleFileChange(e, false)}
             disabled={slike.length >= 10 || uploading}
           />
@@ -691,8 +775,10 @@ const PlayroomForm = ({
 
       <div className="form-section">
         <h3>🎥 Video galerija (maks. 3)</h3>
+
         <p className="section-hint">
-          Dodaj video snimke sa rođendana, događaja ili prikaza igraonice.
+          Dodaj video snimke sa rođendana, događaja ili prikaza igraonice (maks.
+          50 MB po videu).
         </p>
 
         <div className="dynamic-input">
@@ -707,6 +793,7 @@ const PlayroomForm = ({
             <input
               type="file"
               accept="video/*"
+              multiple
               onChange={handleVideoChange}
               disabled={uploadingVideo || videoGalerija.length >= 3}
             />
@@ -715,12 +802,24 @@ const PlayroomForm = ({
               type="button"
               onClick={handleAddVideo}
               disabled={
-                !noviVideo || uploadingVideo || videoGalerija.length >= 3
+                noviVideo.length === 0 ||
+                uploadingVideo ||
+                videoGalerija.length >= 3
               }
             >
               {uploadingVideo ? "Uploadujem..." : "+ Dodaj video"}
             </button>
           </div>
+
+          {noviVideo.length > 0 && (
+            <div className="items-list">
+              {noviVideo.map((file, idx) => (
+                <div key={`${file.name}-${idx}`} className="item">
+                  <span>{file.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {videoGalerija.length > 0 && (
             <div className="videos-list">

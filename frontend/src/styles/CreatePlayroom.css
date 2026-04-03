@@ -393,6 +393,14 @@
   background: #d32f2f;
 }
 
+.upload-hint {
+  display: block;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: #64748b; /* siva */
+}
+
 /* ============================================
    WORKING HOURS
 ============================================ */
