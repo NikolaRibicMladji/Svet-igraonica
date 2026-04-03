@@ -1,17 +1,29 @@
 const Booking = require("../models/Booking");
 const TimeSlot = require("../models/TimeSlot");
 const Playroom = require("../models/Playroom");
+const User = require("../models/User");
 const { reserveSlot } = require("../services/bookingService");
 const BOOKING_STATUS = require("../constants/bookingStatus");
+const ROLES = require("../constants/roles");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const generateAccessToken = require("../utils/generateToken");
 const {
   sendBookingConfirmation,
   sendBookingCancellation,
   sendBookingConfirmationToOwner,
 } = require("../utils/emailService");
 
-// @desc    Kreiraj novu rezervaciju (i za neregistrovane korisnike)
+const REFRESH_TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
+// @desc    Kreiraj novu rezervaciju (ulogovan korisnik)
 // @route   POST /api/bookings
-// @access  Public
+// @access  Private
 exports.createBooking = async (req, res, next) => {
   try {
     const booking = await reserveSlot({
@@ -73,6 +85,131 @@ exports.createBooking = async (req, res, next) => {
       success: true,
       data: booking,
       message: "Rezervacija uspešno kreirana",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Guest rezervacija + registracija + auto login
+// @route   POST /api/bookings/guest
+// @access  Public
+exports.createGuestBooking = async (req, res, next) => {
+  try {
+    const {
+      slotId,
+      ime,
+      prezime,
+      email,
+      telefon,
+      password,
+      brojDece,
+      brojRoditelja,
+      napomena,
+    } = req.body;
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Korisnik sa ovom email adresom već postoji. Prijavite se da biste završili rezervaciju.",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create({
+      ime: ime.trim(),
+      prezime: prezime.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      telefon: telefon.trim(),
+      role: ROLES.RODITELJ,
+      deca: [],
+    });
+
+    const accessToken = generateAccessToken(newUser);
+
+    const refreshToken = jwt.sign(
+      { id: newUser._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" },
+    );
+
+    res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+
+    const booking = await reserveSlot({
+      slotId,
+      user: newUser,
+      payload: {
+        imeRoditelja: ime.trim(),
+        prezimeRoditelja: prezime.trim(),
+        emailRoditelja: normalizedEmail,
+        telefon: telefon.trim(),
+        brojDece,
+        brojRoditelja,
+        napomena,
+      },
+    });
+
+    try {
+      const populatedBooking = await Booking.findById(booking._id)
+        .populate("playroomId", "naziv adresa grad vlasnikId")
+        .populate("roditeljId", "ime prezime email telefon")
+        .populate("timeSlotId");
+
+      const userForEmail = populatedBooking.roditeljId || {
+        ime: populatedBooking.imeRoditelja,
+        prezime: populatedBooking.prezimeRoditelja,
+        email: populatedBooking.emailRoditelja,
+        telefon: populatedBooking.telefonRoditelja,
+      };
+
+      const playroom = populatedBooking.playroomId;
+      const timeSlot = {
+        datum: populatedBooking.datum,
+        vremeOd: populatedBooking.vremeOd,
+        vremeDo: populatedBooking.vremeDo,
+      };
+
+      if (userForEmail.email) {
+        await sendBookingConfirmation(
+          populatedBooking,
+          userForEmail,
+          playroom,
+          timeSlot,
+        );
+      }
+
+      if (playroom?.vlasnikId) {
+        await sendBookingConfirmationToOwner(
+          populatedBooking,
+          playroom,
+          timeSlot,
+        );
+      }
+    } catch (emailError) {
+      console.error("Greška pri slanju email potvrde:", emailError);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Uspešna registracija i rezervacija",
+      accessToken,
+      user: {
+        id: newUser._id,
+        ime: newUser.ime,
+        prezime: newUser.prezime,
+        email: newUser.email,
+        telefon: newUser.telefon,
+        role: newUser.role,
+      },
+      data: booking,
     });
   } catch (error) {
     next(error);

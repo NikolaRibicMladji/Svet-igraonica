@@ -46,13 +46,13 @@ const Navbar = () => {
     if (user?.role === "vlasnik") {
       return (
         <>
-          <Link to="/vlasnik/dashboard" onClick={closeMenu}>
+          <Link to="/owner/dashboard" onClick={closeMenu}>
             📊 Dashboard
           </Link>
           <Link to="/manage-playroom" onClick={closeMenu}>
             🏢 Moja igraonica
           </Link>
-          <Link to="/owner-slots" onClick={closeMenu}>
+          <Link to="/owner/timeslots" onClick={closeMenu}>
             📅 Upravljanje terminima
           </Link>
         </>

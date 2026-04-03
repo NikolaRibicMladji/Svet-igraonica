@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getTimeSlots, createBooking } from "../services/bookingService";
 import { getPlayroomById } from "../services/playroomService";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 import "../styles/Book.css";
 
 const Book = () => {
@@ -39,6 +40,8 @@ const Book = () => {
     prezime: "",
     email: "",
     telefon: "",
+    password: "",
+    confirmPassword: "",
   });
 
   useEffect(() => {
@@ -49,6 +52,8 @@ const Book = () => {
         prezime: user.prezime || prev.prezime || "",
         email: user.email || prev.email || "",
         telefon: user.telefon || prev.telefon || "",
+        password: "",
+        confirmPassword: "",
       }));
     }
   }, [authLoading, isAuthenticated, user]);
@@ -211,12 +216,6 @@ const Book = () => {
   const handleBook = async () => {
     setError("");
 
-    if (!isAuthenticated) {
-      setError("Morate biti prijavljeni da biste rezervisali termin.");
-      scrollToTop();
-      return;
-    }
-
     if (!selectedSlot?._id) {
       setError("Izaberite termin.");
       scrollToTop();
@@ -272,10 +271,36 @@ const Book = () => {
       return;
     }
 
+    if (!isAuthenticated) {
+      if (!korisnikPodaci.password.trim()) {
+        setError("Unesite lozinku.");
+        scrollToTop();
+        return;
+      }
+
+      if (korisnikPodaci.password.trim().length < 6) {
+        setError("Lozinka mora imati najmanje 6 karaktera.");
+        scrollToTop();
+        return;
+      }
+
+      if (!korisnikPodaci.confirmPassword.trim()) {
+        setError("Potvrdite lozinku.");
+        scrollToTop();
+        return;
+      }
+
+      if (korisnikPodaci.password !== korisnikPodaci.confirmPassword) {
+        setError("Lozinke se ne poklapaju.");
+        scrollToTop();
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
-      const result = await createBooking({
+      const bookingPayload = {
         slotId: selectedSlot._id,
         timeSlotId: selectedSlot._id,
         playroomId: id,
@@ -287,7 +312,7 @@ const Book = () => {
         napomena: napomena.trim(),
         imeRoditelja: korisnikPodaci.ime.trim(),
         prezimeRoditelja: korisnikPodaci.prezime.trim(),
-        emailRoditelja: korisnikPodaci.email.trim(),
+        emailRoditelja: korisnikPodaci.email.trim().toLowerCase(),
         telefon: korisnikPodaci.telefon.trim(),
         ukupnaCena,
         selectedOstaleCene: selectedOstaleCene.map((c) => ({
@@ -300,14 +325,44 @@ const Book = () => {
           tip: u.tip,
           cena: Number(u.cena || 0),
         })),
-      });
+      };
 
-      if (result?.success) {
-        await loadTimeSlots();
-        navigate("/booking-success");
+      let result;
+
+      if (isAuthenticated) {
+        result = await createBooking(bookingPayload);
+
+        if (result?.success) {
+          await loadTimeSlots();
+          navigate("/booking-success");
+        } else {
+          setError(result?.error || "Rezervacija nije uspela.");
+          scrollToTop();
+        }
       } else {
-        setError(result?.error || "Rezervacija nije uspela.");
-        scrollToTop();
+        const response = await api.post("/bookings/guest", {
+          ...bookingPayload,
+          password: korisnikPodaci.password,
+          confirmPassword: korisnikPodaci.confirmPassword,
+          ime: korisnikPodaci.ime.trim(),
+          prezime: korisnikPodaci.prezime.trim(),
+          email: korisnikPodaci.email.trim().toLowerCase(),
+        });
+
+        const accessToken = response?.data?.accessToken;
+        const loggedUser = response?.data?.user;
+
+        if (accessToken) {
+          localStorage.setItem("accessToken", accessToken);
+        }
+
+        if (loggedUser) {
+          localStorage.setItem("user", JSON.stringify(loggedUser));
+        }
+
+        await loadTimeSlots();
+
+        window.location.href = "/booking-success";
       }
     } catch (err) {
       setError(
@@ -587,7 +642,16 @@ const Book = () => {
               )}
 
             <div className="user-data-section">
-              <h4>👤 Vaši podaci</h4>
+              <div className="user-data-header">
+                <h4>👤 Vaši podaci</h4>
+
+                {!isAuthenticated && (
+                  <span className="user-info-text">
+                    ( Nakon potvrde rezervacije bićete automatski registrovani i
+                    prijavljeni )
+                  </span>
+                )}
+              </div>
 
               <div className="form-row">
                 <div className="form-group">
@@ -636,6 +700,32 @@ const Book = () => {
                   />
                 </div>
               </div>
+
+              {!isAuthenticated && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Lozinka *</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={korisnikPodaci.password}
+                      onChange={handleKorisnikChange}
+                      required={!isAuthenticated}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Potvrda lozinke *</label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={korisnikPodaci.confirmPassword}
+                      onChange={handleKorisnikChange}
+                      required={!isAuthenticated}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -716,7 +806,11 @@ const Book = () => {
               onClick={handleBook}
               disabled={submitting}
             >
-              {submitting ? "Rezervišem..." : "✅ Potvrdi rezervaciju"}
+              {submitting
+                ? "Rezervišem..."
+                : !isAuthenticated
+                  ? "✅ Registruj me i potvrdi rezervaciju"
+                  : "✅ Potvrdi rezervaciju"}
             </button>
           </div>
         )}

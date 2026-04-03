@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { getOwnerBookings, confirmBooking } from "../services/bookingService";
 import "../styles/OwnerDashboard.css";
 
 const OwnerDashboard = () => {
@@ -13,9 +14,15 @@ const OwnerDashboard = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [confirmingId, setConfirmingId] = useState("");
+  const [showConfirmedModal, setShowConfirmedModal] = useState(false);
+
   useEffect(() => {
     if (!authLoading) {
       fetchMyPlayrooms();
+      fetchBookings();
     }
   }, [authLoading]);
 
@@ -74,6 +81,74 @@ const OwnerDashboard = () => {
       setStatsLoading(false);
     }
   };
+
+  const fetchBookings = async () => {
+    try {
+      setBookingsLoading(true);
+
+      const res = await getOwnerBookings();
+
+      if (res?.success) {
+        setBookings(Array.isArray(res.data) ? res.data : []);
+      } else {
+        setBookings([]);
+      }
+    } catch (err) {
+      console.error("Greška pri učitavanju rezervacija:", err);
+      setBookings([]);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const handleConfirm = async (bookingId) => {
+    try {
+      setConfirmingId(bookingId);
+      setError("");
+
+      const res = await confirmBooking(bookingId);
+
+      if (res?.success) {
+        await fetchBookings();
+
+        if (selectedPlayroomId) {
+          await fetchStats(selectedPlayroomId);
+        }
+      } else {
+        setError(res?.error || "Greška pri potvrdi rezervacije.");
+      }
+    } catch (err) {
+      console.error("Greška pri potvrdi:", err);
+      setError(
+        err?.response?.data?.message || "Greška pri potvrdi rezervacije.",
+      );
+    } finally {
+      setConfirmingId("");
+    }
+  };
+
+  const filteredBookings = useMemo(() => {
+    if (!selectedPlayroomId) return bookings;
+
+    return bookings.filter((booking) => {
+      const playroomId =
+        typeof booking.playroomId === "object"
+          ? booking.playroomId?._id
+          : booking.playroomId;
+
+      return playroomId === selectedPlayroomId;
+    });
+  }, [bookings, selectedPlayroomId]);
+
+  const pendingBookings = useMemo(
+    () => filteredBookings.filter((b) => b.status === "cekanje"),
+    [filteredBookings],
+  );
+
+  const confirmedBookings = useMemo(
+    () => filteredBookings.filter((b) => b.status === "potvrdjeno"),
+    [filteredBookings],
+  );
 
   if (authLoading || loading) {
     return <div className="loading-container">⏳ Učitavanje podataka...</div>;
@@ -159,10 +234,13 @@ const OwnerDashboard = () => {
             </div>
           </div>
 
-          <div className="stat-card green">
+          <div
+            className="stat-card green clickable"
+            onClick={() => setShowConfirmedModal(true)}
+          >
             <span className="stat-icon">✅</span>
             <div className="stat-info">
-              <h3>{stats?.confirmedBookings ?? 0}</h3>
+              <h3>{confirmedBookings.length}</h3>
               <p>Potvrđene rezervacije</p>
             </div>
           </div>
@@ -181,6 +259,119 @@ const OwnerDashboard = () => {
               <h3>{stats?.totalRevenue ?? 0} RSD</h3>
               <p>Ukupna zarada</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      <div className="owner-bookings">
+        <div className="confirmed-header">
+          <h3>📋 Rezervacije na čekanju</h3>
+        </div>
+
+        {bookingsLoading ? (
+          <div className="loading-container">⏳ Učitavanje rezervacija...</div>
+        ) : pendingBookings.length === 0 ? (
+          <div className="empty-state">
+            <p>Nema rezervacija na čekanju za izabranu igraonicu.</p>
+          </div>
+        ) : (
+          <div className="owner-bookings-list">
+            {pendingBookings.map((booking) => (
+              <div key={booking._id} className="booking-card">
+                <div className="booking-status-row">
+                  <span className="status-badge pending">Čeka potvrdu</span>
+                </div>
+
+                <p>
+                  <strong>
+                    {booking.imeRoditelja} {booking.prezimeRoditelja}
+                  </strong>
+                </p>
+
+                <p>📧 {booking.emailRoditelja || "-"}</p>
+                <p>📞 {booking.telefonRoditelja || booking.telefon || "-"}</p>
+                <p>
+                  📅{" "}
+                  {booking.datum
+                    ? new Date(booking.datum).toLocaleDateString("sr-RS")
+                    : "-"}
+                </p>
+                <p>
+                  ⏰ {booking.vremeOd || "-"} - {booking.vremeDo || "-"}
+                </p>
+                <p>👶 Broj dece: {booking.brojDece ?? 0}</p>
+                <p>👨‍👩‍👧 Broj roditelja: {booking.brojRoditelja ?? 0}</p>
+                <p>💰 Ukupna cena: {booking.ukupnaCena ?? 0} RSD</p>
+
+                <button
+                  className="btn-confirm-booking"
+                  onClick={() => handleConfirm(booking._id)}
+                  disabled={confirmingId === booking._id}
+                >
+                  {confirmingId === booking._id
+                    ? "Potvrđujem..."
+                    : "Potvrdi rezervaciju"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showConfirmedModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowConfirmedModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>✅ Potvrđene rezervacije</h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowConfirmedModal(false)}
+              >
+                ✖
+              </button>
+            </div>
+
+            {confirmedBookings.length === 0 ? (
+              <div className="empty-state modal-empty">
+                <p>Nema potvrđenih rezervacija.</p>
+              </div>
+            ) : (
+              <div className="owner-bookings-list modal-bookings-list">
+                {confirmedBookings.map((booking) => (
+                  <div key={booking._id} className="booking-card">
+                    <div className="booking-status-row">
+                      <span className="status-badge confirmed">Potvrđeno</span>
+                    </div>
+
+                    <p>
+                      <strong>
+                        {booking.imeRoditelja} {booking.prezimeRoditelja}
+                      </strong>
+                    </p>
+
+                    <p>📧 {booking.emailRoditelja || "-"}</p>
+                    <p>
+                      📞 {booking.telefonRoditelja || booking.telefon || "-"}
+                    </p>
+                    <p>
+                      📅{" "}
+                      {booking.datum
+                        ? new Date(booking.datum).toLocaleDateString("sr-RS")
+                        : "-"}
+                    </p>
+                    <p>
+                      ⏰ {booking.vremeOd || "-"} - {booking.vremeDo || "-"}
+                    </p>
+                    <p>👶 Broj dece: {booking.brojDece ?? 0}</p>
+                    <p>👨‍👩‍👧 Broj roditelja: {booking.brojRoditelja ?? 0}</p>
+                    <p>💰 Ukupna cena: {booking.ukupnaCena ?? 0} RSD</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

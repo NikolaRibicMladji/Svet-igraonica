@@ -147,6 +147,22 @@
   color: #e74c3c;
 }
 
+.user-data-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.user-data-header h4 {
+  margin: 0;
+}
+
+.user-info-text {
+  font-size: 14px;
+  color: #64748b; /* neutral siva */
+}
+
 /* =========================================
    FORM
 ========================================= */
