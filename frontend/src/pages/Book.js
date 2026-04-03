@@ -285,9 +285,9 @@ const Book = () => {
         brojDece: brojDeceNum,
         brojRoditelja: brojRoditeljaNum,
         napomena: napomena.trim(),
-        ime: korisnikPodaci.ime.trim(),
-        prezime: korisnikPodaci.prezime.trim(),
-        email: korisnikPodaci.email.trim(),
+        imeRoditelja: korisnikPodaci.ime.trim(),
+        prezimeRoditelja: korisnikPodaci.prezime.trim(),
+        emailRoditelja: korisnikPodaci.email.trim(),
         telefon: korisnikPodaci.telefon.trim(),
         ukupnaCena,
         selectedOstaleCene: selectedOstaleCene.map((c) => ({

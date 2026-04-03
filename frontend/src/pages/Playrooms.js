@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import PlayroomFilters from "../components/PlayroomFilters";
+import PlayroomCoverFallback from "../components/PlayroomCoverFallback";
 import "../styles/Playrooms.css";
 
 const Playrooms = () => {
@@ -143,11 +144,7 @@ const Playrooms = () => {
 
           <div className="playrooms-grid">
             {filteredPlayrooms.map((playroom) => {
-              const imageUrl =
-                playroom.profilnaSlika?.url ||
-                playroom.slike?.find((img) => img?.isMain)?.url ||
-                playroom.slike?.[0]?.url ||
-                "";
+              const imageUrl = playroom.profilnaSlika?.url || "";
 
               const ratingValue = Number(playroom.rating || 0);
               const filledStars = Math.max(
@@ -161,7 +158,7 @@ const Playrooms = () => {
                     {imageUrl ? (
                       <img src={imageUrl} alt={playroom.naziv} />
                     ) : (
-                      <div className="no-image">🎪</div>
+                      <PlayroomCoverFallback naziv={playroom.naziv} />
                     )}
                   </div>
 
