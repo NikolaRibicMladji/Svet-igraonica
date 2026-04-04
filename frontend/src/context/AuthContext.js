@@ -36,6 +36,29 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);
+    setError(null);
+  };
+
+  const loadUser = async () => {
+    try {
+      const response = await api.get("/auth/me");
+      const loadedUser = response?.data?.user;
+
+      if (loadedUser) {
+        setUser(loadedUser);
+        localStorage.setItem(USER_KEY, JSON.stringify(loadedUser));
+        return loadedUser;
+      }
+
+      clearAuthData();
+      return null;
+    } catch (err) {
+      console.error("Greška pri učitavanju korisnika:", err);
+      clearAuthData();
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -49,22 +72,19 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const response = await api.get("/auth/me");
+  const handleAuthSuccess = (response) => {
+    const token = response?.data?.accessToken;
+    const userDataRes = response?.data?.user;
 
-      if (response?.data?.user) {
-        setUser(response.data.user);
-        localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
-      } else {
-        clearAuthData();
-      }
-    } catch (err) {
-      console.error("Greška pri učitavanju korisnika:", err);
-      clearAuthData();
-    } finally {
-      setLoading(false);
-    }
+    setAuthData(userDataRes, token);
+
+    return { success: true, user: userDataRes };
+  };
+
+  const handleAuthError = (err, fallbackMessage) => {
+    const msg = err?.response?.data?.message || fallbackMessage;
+    setError(msg);
+    return { success: false, error: msg };
   };
 
   const register = async (userData) => {
@@ -72,17 +92,9 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await api.post("/auth/register", userData);
-
-      const token = response.data?.accessToken;
-      const userDataRes = response.data?.user;
-
-      setAuthData(userDataRes, token);
-
-      return { success: true, user: userDataRes };
+      return handleAuthSuccess(response);
     } catch (err) {
-      const msg = err?.response?.data?.message || "Greška pri registraciji.";
-      setError(msg);
-      return { success: false, error: msg };
+      return handleAuthError(err, "Greška pri registraciji.");
     }
   };
 
@@ -92,19 +104,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post("/auth/login", {
         email,
-        password, // 🔥 BITNO: backend očekuje password
+        password,
       });
 
-      const token = response.data?.accessToken;
-      const userDataRes = response.data?.user;
-
-      setAuthData(userDataRes, token);
-
-      return { success: true, user: userDataRes };
+      return handleAuthSuccess(response);
     } catch (err) {
-      const msg = err?.response?.data?.message || "Greška pri prijavi.";
-      setError(msg);
-      return { success: false, error: msg };
+      return handleAuthError(err, "Greška pri prijavi.");
     }
   };
 
@@ -125,6 +130,7 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    loadUser,
     isAuthenticated: Boolean(user),
   };
 

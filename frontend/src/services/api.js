@@ -11,8 +11,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token =
-      localStorage.getItem("accessToken") || localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -34,10 +33,12 @@ api.interceptors.response.use(
 
     if (
       error.response.status === 401 &&
-      !originalRequest?._retry &&
-      !originalRequest?.url?.includes("/auth/login") &&
-      !originalRequest?.url?.includes("/auth/register") &&
-      !originalRequest?.url?.includes("/auth/refresh")
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/auth/login") &&
+      !originalRequest.url?.includes("/auth/register") &&
+      !originalRequest.url?.includes("/auth/refresh") &&
+      !originalRequest.url?.includes("/auth/logout")
     ) {
       originalRequest._retry = true;
 
@@ -64,7 +65,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
-        localStorage.removeItem("token");
         localStorage.removeItem("user");
 
         if (window.location.pathname !== "/login") {

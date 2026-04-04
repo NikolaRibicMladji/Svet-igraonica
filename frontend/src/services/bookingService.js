@@ -84,7 +84,18 @@ export const deleteTimeSlot = async (id) => {
 
 export const createBooking = async (data) => {
   try {
-    const response = await api.post("/bookings", data);
+    const payload = {
+      slotId: data.slotId,
+      imeRoditelja: data.imeRoditelja || data.ime,
+      prezimeRoditelja: data.prezimeRoditelja || data.prezime,
+      emailRoditelja: data.emailRoditelja || data.email,
+      telefon: data.telefon,
+      brojDece: Number(data.brojDece),
+      brojRoditelja: data.brojRoditelja ? Number(data.brojRoditelja) : 0,
+      napomena: data.napomena || "",
+    };
+
+    const response = await api.post("/bookings", payload);
 
     return {
       success: true,
@@ -101,7 +112,6 @@ export const createBooking = async (data) => {
     };
   }
 };
-
 export const getMyBookings = async () => {
   try {
     const response = await api.get("/bookings/my");
@@ -244,6 +254,64 @@ export const manualBookTimeSlot = async (timeSlotId, bookingData) => {
       error:
         error.response?.data?.message ||
         "Greška pri ručnom zauzimanju termina.",
+    };
+  }
+};
+
+export const createGuestBooking = async (data) => {
+  try {
+    const payload = {
+      slotId: data.slotId,
+      ime: data.ime,
+      prezime: data.prezime,
+      email: data.email,
+      telefon: data.telefon,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      brojDece: Number(data.brojDece),
+      brojRoditelja: data.brojRoditelja ? Number(data.brojRoditelja) : 0,
+      napomena: data.napomena || "",
+    };
+
+    const response = await api.post("/bookings/guest", payload);
+
+    return {
+      success: true,
+      data: response.data?.data || null,
+      message:
+        response.data?.message || "Rezervacija uspešna (guest korisnik).",
+    };
+  } catch (error) {
+    console.error("Greška pri guest rezervaciji:", error);
+
+    return {
+      success: false,
+      error: error.response?.data?.message || "Greška pri guest rezervaciji.",
+    };
+  }
+};
+
+export const getAvailableTimeSlots = async (playroomId, datum = null) => {
+  try {
+    let url = `/timeslots/playroom/${playroomId}/available`;
+    if (datum) {
+      url += `?datum=${datum}`;
+    }
+
+    const response = await api.get(url);
+
+    return {
+      success: true,
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+    };
+  } catch (error) {
+    console.error("Greška pri dohvatanju slobodnih termina:", error);
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ||
+        "Greška pri dohvatanju slobodnih termina.",
     };
   }
 };

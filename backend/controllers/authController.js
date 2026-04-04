@@ -87,10 +87,7 @@ exports.refreshToken = async (req, res, next) => {
       accessToken,
     });
   } catch (error) {
-    return res.status(403).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 

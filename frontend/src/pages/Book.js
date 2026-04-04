@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getTimeSlots, createBooking } from "../services/bookingService";
+import {
+  getAvailableTimeSlots,
+  createBooking,
+  createGuestBooking,
+} from "../services/bookingService";
 import { getPlayroomById } from "../services/playroomService";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
 import "../styles/Book.css";
 
 const Book = () => {
@@ -99,7 +102,7 @@ const Book = () => {
     setSelectedOstaleCene([]);
 
     try {
-      const result = await getTimeSlots(id, selectedDate);
+      const result = await getAvailableTimeSlots(id, selectedDate);
 
       if (result?.success) {
         setTimeSlots(Array.isArray(result.data) ? result.data : []);
@@ -208,9 +211,7 @@ const Book = () => {
     ukupnoOsoba,
   ]);
 
-  const maxDece = Number(
-    selectedSlot?.slobodno || playroom?.kapacitet?.deca || 30,
-  );
+  const maxDece = Number(playroom?.kapacitet?.deca || 30);
   const maxRoditelja = Number(playroom?.kapacitet?.roditelji || 50);
 
   const handleBook = async () => {
@@ -302,67 +303,33 @@ const Book = () => {
     try {
       const bookingPayload = {
         slotId: selectedSlot._id,
-        timeSlotId: selectedSlot._id,
-        playroomId: id,
-        datum: selectedDate,
-        vremeOd: selectedSlot.vremeOd,
-        vremeDo: selectedSlot.vremeDo,
+        ime: korisnikPodaci.ime.trim(),
+        prezime: korisnikPodaci.prezime.trim(),
+        email: korisnikPodaci.email.trim().toLowerCase(),
+        telefon: korisnikPodaci.telefon.trim(),
         brojDece: brojDeceNum,
         brojRoditelja: brojRoditeljaNum,
         napomena: napomena.trim(),
-        imeRoditelja: korisnikPodaci.ime.trim(),
-        prezimeRoditelja: korisnikPodaci.prezime.trim(),
-        emailRoditelja: korisnikPodaci.email.trim().toLowerCase(),
-        telefon: korisnikPodaci.telefon.trim(),
-        ukupnaCena,
-        selectedOstaleCene: selectedOstaleCene.map((c) => ({
-          naziv: c.naziv,
-          tip: c.tip,
-          cena: Number(c.cena || 0),
-        })),
-        selectedUsluge: selectedUsluge.map((u) => ({
-          naziv: u.naziv,
-          tip: u.tip,
-          cena: Number(u.cena || 0),
-        })),
       };
 
       let result;
 
       if (isAuthenticated) {
         result = await createBooking(bookingPayload);
-
-        if (result?.success) {
-          await loadTimeSlots();
-          navigate("/booking-success");
-        } else {
-          setError(result?.error || "Rezervacija nije uspela.");
-          scrollToTop();
-        }
       } else {
-        const response = await api.post("/bookings/guest", {
+        result = await createGuestBooking({
           ...bookingPayload,
           password: korisnikPodaci.password,
           confirmPassword: korisnikPodaci.confirmPassword,
-          ime: korisnikPodaci.ime.trim(),
-          prezime: korisnikPodaci.prezime.trim(),
-          email: korisnikPodaci.email.trim().toLowerCase(),
         });
+      }
 
-        const accessToken = response?.data?.accessToken;
-        const loggedUser = response?.data?.user;
-
-        if (accessToken) {
-          localStorage.setItem("accessToken", accessToken);
-        }
-
-        if (loggedUser) {
-          localStorage.setItem("user", JSON.stringify(loggedUser));
-        }
-
+      if (result?.success) {
         await loadTimeSlots();
-
-        window.location.href = "/booking-success";
+        navigate("/booking-success");
+      } else {
+        setError(result?.error || "Rezervacija nije uspela.");
+        scrollToTop();
       }
     } catch (err) {
       setError(
