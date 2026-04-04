@@ -12,7 +12,7 @@ const {
 const { protect } = require("../middleware/authMiddleware");
 
 // VALIDACIJA
-const validate = require("../middleware/validateMiddleware");
+const validate = require("../middleware/validate");
 const {
   registerSchema,
   loginSchema,

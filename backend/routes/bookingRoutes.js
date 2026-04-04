@@ -2,10 +2,12 @@ const express = require("express");
 const router = express.Router();
 
 const { protect } = require("../middleware/authMiddleware");
-const validate = require("../middleware/validateMiddleware");
+const validate = require("../middleware/validate");
+
 const {
   createBookingSchema,
   createGuestBookingSchema,
+  bookingIdParamSchema,
 } = require("../validations/bookingValidation");
 
 const {
@@ -29,8 +31,11 @@ router.use(protect);
 
 router.get("/my", getMyBookings);
 router.get("/owner", getOwnerBookings);
-router.get("/:id", getBookingById);
-router.put("/:id/cancel", cancelBooking);
-router.put("/:id/confirm", confirmBooking);
+
+router.get("/:id", validate(bookingIdParamSchema), getBookingById);
+
+router.put("/:id/cancel", validate(bookingIdParamSchema), cancelBooking);
+
+router.put("/:id/confirm", validate(bookingIdParamSchema), confirmBooking);
 
 module.exports = router;

@@ -11,32 +11,49 @@ const REFRESH_TOKEN_COOKIE_OPTIONS = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
+const createError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
+
+const normalizeEmail = (email) => email?.trim().toLowerCase();
+
+const hashPassword = async (password) => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: "7d",
+  });
+};
+
 const generateAuthResponse = (user) => {
   const accessToken = generateAccessToken(user);
-
-  const refreshToken = jwt.sign(
-    { id: user._id },
-    process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: "7d" },
-  );
+  const refreshToken = generateRefreshToken(user);
 
   return { accessToken, refreshToken };
 };
 
-exports.registerUser = async (data) => {
-  const { ime, prezime, email, password, telefon, role, deca } = data;
-
-  const normalizedEmail = email?.trim().toLowerCase();
+const createParentUser = async ({
+  ime,
+  prezime,
+  email,
+  password,
+  telefon,
+  role = ROLES.RODITELJ,
+  deca = [],
+}) => {
+  const normalizedEmail = normalizeEmail(email);
 
   const userExists = await User.findOne({ email: normalizedEmail });
   if (userExists) {
-    throw new Error("Korisnik sa ovom email adresom već postoji");
+    throw createError("Korisnik sa ovom email adresom već postoji", 400);
   }
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const userRole = role === ROLES.VLASNIK ? ROLES.VLASNIK : ROLES.RODITELJ;
+  const hashedPassword = await hashPassword(password);
 
   const user = await User.create({
     ime: ime?.trim(),
@@ -44,8 +61,26 @@ exports.registerUser = async (data) => {
     email: normalizedEmail,
     password: hashedPassword,
     telefon: telefon?.trim(),
-    role: userRole,
+    role,
     deca: Array.isArray(deca) ? deca : [],
+  });
+
+  return user;
+};
+
+exports.registerUser = async (data) => {
+  const { ime, prezime, email, password, telefon, role, deca } = data;
+
+  const userRole = role === ROLES.VLASNIK ? ROLES.VLASNIK : ROLES.RODITELJ;
+
+  const user = await createParentUser({
+    ime,
+    prezime,
+    email,
+    password,
+    telefon,
+    role: userRole,
+    deca,
   });
 
   const tokens = generateAuthResponse(user);
@@ -54,20 +89,20 @@ exports.registerUser = async (data) => {
 };
 
 exports.loginUser = async (email, password) => {
-  const normalizedEmail = email?.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
   const user = await User.findOne({ email: normalizedEmail }).select(
     "+password",
   );
 
   if (!user) {
-    throw new Error("Pogrešan email ili lozinka");
+    throw createError("Pogrešan email ili lozinka", 401);
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
 
   if (!isMatch) {
-    throw new Error("Pogrešan email ili lozinka");
+    throw createError("Pogrešan email ili lozinka", 401);
   }
 
   const tokens = generateAuthResponse(user);
@@ -77,15 +112,25 @@ exports.loginUser = async (email, password) => {
 
 exports.refreshUserToken = async (refreshToken) => {
   if (!refreshToken) {
-    throw new Error("Niste autorizovani");
+    throw createError("Niste autorizovani", 401);
   }
 
-  const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+  let decoded;
+
+  try {
+    decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      throw createError("Refresh token je istekao", 401);
+    }
+
+    throw createError("Refresh token nije validan", 401);
+  }
 
   const user = await User.findById(decoded.id);
 
   if (!user) {
-    throw new Error("Korisnik ne postoji");
+    throw createError("Korisnik ne postoji", 401);
   }
 
   const accessToken = generateAccessToken(user);
@@ -96,26 +141,22 @@ exports.refreshUserToken = async (refreshToken) => {
 exports.registerGuestParent = async (data) => {
   const { ime, prezime, email, password, telefon } = data;
 
-  const normalizedEmail = email?.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
   const userExists = await User.findOne({ email: normalizedEmail });
   if (userExists) {
-    const error = new Error(
+    throw createError(
       "Korisnik sa ovom email adresom već postoji. Prijavite se da biste završili rezervaciju.",
+      400,
     );
-    error.statusCode = 400;
-    throw error;
   }
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const user = await User.create({
-    ime: ime?.trim(),
-    prezime: prezime?.trim(),
+  const user = await createParentUser({
+    ime,
+    prezime,
     email: normalizedEmail,
-    password: hashedPassword,
-    telefon: telefon?.trim(),
+    password,
+    telefon,
     role: ROLES.RODITELJ,
     deca: [],
   });

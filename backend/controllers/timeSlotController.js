@@ -12,13 +12,6 @@ exports.createTimeSlot = async (req, res, next) => {
   try {
     const { playroomId, datum, vremeOd, vremeDo, cena } = req.body;
 
-    if (!playroomId || !datum || !vremeOd || !vremeDo || cena == null) {
-      return res.status(400).json({
-        success: false,
-        message: "Sva obavezna polja moraju biti popunjena",
-      });
-    }
-
     const playroom = await Playroom.findById(playroomId);
     if (!playroom) {
       return res.status(404).json({
@@ -211,13 +204,6 @@ exports.updateTimeSlot = async (req, res, next) => {
     if (maxDece !== undefined) {
       const parsedMaxDece = Number(maxDece);
 
-      if (Number.isNaN(parsedMaxDece) || parsedMaxDece < 1) {
-        return res.status(400).json({
-          success: false,
-          message: "maxDece mora biti validan broj veći od 0",
-        });
-      }
-
       const hasActiveBooking = await timeSlotService.hasActiveBookingForSlot(
         timeSlot._id,
       );
@@ -235,13 +221,6 @@ exports.updateTimeSlot = async (req, res, next) => {
 
     if (cena !== undefined) {
       const parsedCena = Number(cena);
-
-      if (Number.isNaN(parsedCena) || parsedCena < 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Cena mora biti validan broj",
-        });
-      }
 
       const hasActiveBooking = await timeSlotService.hasActiveBookingForSlot(
         timeSlot._id,
@@ -555,13 +534,6 @@ exports.manualBookTimeSlot = async (req, res, next) => {
     }
 
     const parsedBrojDece = Number(brojDece || 1);
-
-    if (Number.isNaN(parsedBrojDece) || parsedBrojDece < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "Broj dece mora biti validan broj",
-      });
-    }
 
     // Ne dozvoli ručno zauzimanje termina koji je već prošao
     const slotEnd = new Date(timeSlot.datum);
