@@ -35,7 +35,7 @@ const TimeSlotSchema = new mongoose.Schema(
 
     slobodno: {
       type: Number,
-      default: 20,
+      default: 1,
       min: 0,
     },
 
@@ -96,17 +96,14 @@ TimeSlotSchema.index({
   zauzeto: 1,
 });
 
+TimeSlotSchema.index({ datum: 1 });
+
 // 🔒 automatski sync zauzeto/slobodno
 TimeSlotSchema.pre("save", function (next) {
-  if (this.slobodno <= 0) {
+  if (this.zauzeto) {
     this.slobodno = 0;
-    this.zauzeto = true;
   } else {
-    this.zauzeto = false;
-  }
-
-  if (this.maxDece < this.slobodno) {
-    this.slobodno = this.maxDece;
+    this.slobodno = 1;
   }
 
   next();

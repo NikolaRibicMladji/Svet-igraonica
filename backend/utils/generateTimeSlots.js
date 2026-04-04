@@ -115,7 +115,7 @@ const createSlotPayload = (playroom, date, vremeOd, vremeDo) => ({
   vremeOd,
   vremeDo,
   maxDece: playroom.kapacitet?.deca || DEFAULT_CAPACITY,
-  slobodno: playroom.kapacitet?.deca || DEFAULT_CAPACITY,
+  slobodno: 1,
   cena: playroom.osnovnaCena ?? DEFAULT_PRICE,
   zauzeto: false,
   aktivno: true,
@@ -269,6 +269,7 @@ const deleteAllTimeSlotsForPlayroom = async (playroomId) => {
     const result = await TimeSlot.deleteMany({
       playroomId,
       zauzeto: false,
+      aktivno: false,
     });
 
     return { deletedCount: result.deletedCount };
@@ -448,14 +449,7 @@ const syncTimeSlotsWithWorkingHours = async (playroomId, days = 30) => {
           (existingSlot.maxDece || 0) !==
           (playroom.kapacitet?.deca || DEFAULT_CAPACITY)
         ) {
-          const reservedCount = Math.max(
-            0,
-            (existingSlot.maxDece || DEFAULT_CAPACITY) -
-              (existingSlot.slobodno || 0),
-          );
-          const newMax = playroom.kapacitet?.deca || DEFAULT_CAPACITY;
-          updates.maxDece = newMax;
-          updates.slobodno = Math.max(0, newMax - reservedCount);
+          updates.maxDece = playroom.kapacitet?.deca || DEFAULT_CAPACITY;
           shouldUpdate = true;
         }
 

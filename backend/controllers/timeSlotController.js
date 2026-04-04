@@ -468,12 +468,18 @@ exports.getAllTimeSlotsForOwner = async (req, res, next) => {
       playroomId,
       datum: { $gte: startDate, $lte: endDate },
       status: { $ne: BOOKING_STATUS.OTKAZANO },
-    }).populate("roditeljId", "ime prezime email telefon");
+    })
+      .select(
+        "_id timeSlotId roditeljId imeRoditelja prezimeRoditelja emailRoditelja telefonRoditelja brojDece brojRoditelja napomena status createdAt",
+      )
+      .populate("roditeljId", "ime prezime email telefon");
+
+    const bookingMap = new Map(
+      bookings.map((b) => [b.timeSlotId?.toString(), b]),
+    );
 
     const slotsWithBookings = timeSlots.map((slot) => {
-      const foundBooking = bookings.find(
-        (b) => b.timeSlotId?.toString() === slot._id.toString(),
-      );
+      const foundBooking = bookingMap.get(slot._id.toString());
 
       return {
         ...slot.toObject(),

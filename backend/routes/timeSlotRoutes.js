@@ -18,34 +18,70 @@ const {
   manualBookTimeSlot,
 } = require("../controllers/timeSlotController");
 
+const validate = require("../middleware/validate");
+const {
+  createTimeSlotSchema,
+  updateTimeSlotSchema,
+  manualBookTimeSlotSchema,
+  playroomDateQuerySchema,
+  timeSlotIdParamSchema,
+} = require("../validations/timeSlotValidation");
+
 // 🌐 JAVNE RUTE
-router.get("/playroom/:playroomId", getTimeSlotsByPlayroom);
-router.get("/playroom/:playroomId/available", getAvailableTimeSlots);
-router.get("/:id", getTimeSlotById);
+router.get(
+  "/playroom/:playroomId",
+  validate(playroomDateQuerySchema),
+  getTimeSlotsByPlayroom,
+);
+
+router.get(
+  "/playroom/:playroomId/available",
+  validate(playroomDateQuerySchema),
+  getAvailableTimeSlots,
+);
+
+router.get("/:id", validate(timeSlotIdParamSchema), getTimeSlotById);
 
 // 🔒 sve ispod traži login
 router.use(protect);
 
 // 👤 vlasnik/admin
-router.post("/", authorize(ROLES.VLASNIK, ROLES.ADMIN), createTimeSlot);
+router.post(
+  "/",
+  authorize(ROLES.VLASNIK, ROLES.ADMIN),
+  validate(createTimeSlotSchema),
+  createTimeSlot,
+);
 router.get("/my", authorize(ROLES.VLASNIK, ROLES.ADMIN), getMyTimeSlots);
 router.post(
   "/generate/:playroomId",
   authorize(ROLES.VLASNIK, ROLES.ADMIN),
   generateSlotsForPlayroom,
 );
-router.put("/:id", authorize(ROLES.VLASNIK, ROLES.ADMIN), updateTimeSlot);
-router.delete("/:id", authorize(ROLES.VLASNIK, ROLES.ADMIN), deleteTimeSlot);
+router.put(
+  "/:id",
+  authorize(ROLES.VLASNIK, ROLES.ADMIN),
+  validate(updateTimeSlotSchema),
+  updateTimeSlot,
+);
+router.delete(
+  "/:id",
+  authorize(ROLES.VLASNIK, ROLES.ADMIN),
+  validate(timeSlotIdParamSchema),
+  deleteTimeSlot,
+);
 
 router.get(
   "/playroom/:playroomId/all",
   authorize(ROLES.VLASNIK, ROLES.ADMIN),
+  validate(playroomDateQuerySchema),
   getAllTimeSlotsForOwner,
 );
 
 router.post(
   "/:id/manual-book",
   authorize(ROLES.VLASNIK, ROLES.ADMIN),
+  validate(manualBookTimeSlotSchema),
   manualBookTimeSlot,
 );
 

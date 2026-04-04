@@ -340,4 +340,10 @@ PlayroomSchema.index({ grad: 1, status: 1, verifikovan: 1 });
 PlayroomSchema.index({ osnovnaCena: 1, status: 1, verifikovan: 1 });
 PlayroomSchema.index({ rating: -1, reviewCount: -1 });
 
+PlayroomSchema.index({ vlasnikId: 1, createdAt: -1 });
+
+PlayroomSchema.index({ verifikovan: 1, status: 1, grad: 1 });
+
+PlayroomSchema.index({ status: 1, verifikovan: 1, rating: -1 });
+
 module.exports = mongoose.model("Playroom", PlayroomSchema);

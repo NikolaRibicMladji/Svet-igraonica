@@ -106,21 +106,16 @@ const BookingSchema = new mongoose.Schema(
   },
 );
 
-// 🔒 Sprečava duple rezervacije za isti slot (osim otkazanih)
-BookingSchema.index(
-  { timeSlotId: 1, status: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      status: { $ne: BOOKING_STATUS.OTKAZANO },
-    },
-  },
-);
-
 // ⚡ Brži query za owner dashboard
 BookingSchema.index({ playroomId: 1, datum: 1 });
 
 // ⚡ Brži query za user istoriju
 BookingSchema.index({ roditeljId: 1, createdAt: -1 });
+
+BookingSchema.index({ timeSlotId: 1 });
+
+BookingSchema.index({ playroomId: 1, status: 1, datum: 1 });
+
+BookingSchema.index({ status: 1, datum: 1 });
 
 module.exports = mongoose.model("Booking", BookingSchema);
