@@ -1,18 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import "../styles/CreatePlayroom.css";
+import { useEffect, useMemo, useState } from "react";
 import { uploadImage, uploadVideo } from "../services/uploadService";
 import { normalizeImageItem, normalizeVideoItem } from "../utils/media";
-import BasicInfoSection from "./playroom-form/BasicInfoSection";
-import CapacitySection from "./playroom-form/CapacitySection";
-import SocialLinksSection from "./playroom-form/SocialLinksSection";
-import WorkingHoursSection from "./playroom-form/WorkingHoursSection";
-import ImagesSection from "./playroom-form/ImagesSection";
-import VideosSection from "./playroom-form/VideosSection";
-import ParentPricingSection from "./playroom-form/ParentPricingSection";
-import AdditionalPricesSection from "./playroom-form/AdditionalPricesSection";
-import PackagesSection from "./playroom-form/PackagesSection";
-import AdditionalServicesSection from "./playroom-form/AdditionalServicesSection";
-import BenefitsSection from "./playroom-form/BenefitsSection";
 
 const DEFAULT_RADNO_VREME = {
   ponedeljak: { od: "09:00", do: "20:00", radi: true },
@@ -36,7 +24,7 @@ const DEFAULT_CENA_RODITELJA = {
   iznos: "",
 };
 
-const DEFAULT_DANI = [
+export const DEFAULT_DANI = [
   { key: "ponedeljak", naziv: "Ponedeljak" },
   { key: "utorak", naziv: "Utorak" },
   { key: "sreda", naziv: "Sreda" },
@@ -46,8 +34,8 @@ const DEFAULT_DANI = [
   { key: "nedelja", naziv: "Nedelja" },
 ];
 
-const IMAGE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const VIDEO_MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const IMAGE_MAX_SIZE = 10 * 1024 * 1024;
+const VIDEO_MAX_SIZE = 50 * 1024 * 1024;
 
 const toNumberOrZero = (value) => {
   const num = Number(value);
@@ -56,12 +44,7 @@ const toNumberOrZero = (value) => {
 
 const sanitizeText = (value) => (typeof value === "string" ? value.trim() : "");
 
-const PlayroomForm = ({
-  initialData,
-  onSubmit,
-  onCancel,
-  isEditing = false,
-}) => {
+export const usePlayroomForm = ({ initialData, onSubmit }) => {
   const initialFormData = useMemo(
     () => ({
       naziv: initialData?.naziv || "",
@@ -439,6 +422,7 @@ const PlayroomForm = ({
   const handleAddPogodnost = () => {
     const vrednost = sanitizeText(novaPogodnost);
     if (!vrednost) return;
+
     if (
       besplatnePogodnosti.some(
         (p) => p.toLowerCase() === vrednost.toLowerCase(),
@@ -486,6 +470,7 @@ const PlayroomForm = ({
       } finally {
         setUploading(false);
       }
+
       e.target.value = "";
       return;
     }
@@ -543,15 +528,15 @@ const PlayroomForm = ({
     if (!sanitizeText(formData.grad)) return "Grad je obavezan.";
     if (!sanitizeText(formData.opis)) return "Opis je obavezan.";
     if (!sanitizeText(formData.kontaktTelefon))
-      if (!/^[0-9+ ]+$/.test(formData.kontaktTelefon)) {
-        return "Telefon može sadržati samo brojeve.";
-      }
-    return "Kontakt telefon je obavezan.";
+      return "Kontakt telefon je obavezan.";
+    if (!/^[0-9+ ]+$/.test(formData.kontaktTelefon)) {
+      return "Telefon može sadržati samo brojeve.";
+    }
     if (!sanitizeText(formData.kontaktEmail))
-      if (!/\S+@\S+\.\S+/.test(formData.kontaktEmail)) {
-        return "Email nije validan.";
-      }
-    return "Kontakt email je obavezan.";
+      return "Kontakt email je obavezan.";
+    if (!/\S+@\S+\.\S+/.test(formData.kontaktEmail)) {
+      return "Email nije validan.";
+    }
 
     const kapacitetDece = Number(formData.kapacitet.deca);
     if (!Number.isFinite(kapacitetDece) || kapacitetDece < 1) {
@@ -612,13 +597,11 @@ const PlayroomForm = ({
         tip: c.tip || "fiksno",
         opis: sanitizeText(c.opis),
       })),
-
       paketi: paketi.map((p) => ({
         naziv: sanitizeText(p.naziv),
         cena: toNumberOrZero(p.cena),
         opis: sanitizeText(p.opis),
       })),
-
       dodatneUsluge: dodatneUsluge.map((u) => ({
         naziv: sanitizeText(u.naziv),
         cena: toNumberOrZero(u.cena),
@@ -662,120 +645,51 @@ const PlayroomForm = ({
     onSubmit(submitData);
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="edit-form full-form">
-      <h2>{isEditing ? "✏️ Uredi igraonicu" : "✨ Dodaj novu igraonicu"}</h2>
-
-      {error && <div className="error-message">{error}</div>}
-
-      <BasicInfoSection formData={formData} handleChange={handleChange} />
-
-      <CapacitySection formData={formData} handleChange={handleChange} />
-
-      <ImagesSection
-        uploading={uploading}
-        slike={slike}
-        profilnaSlika={profilnaSlika}
-        handleFileChange={handleFileChange}
-        removeProfilna={removeProfilna}
-        removeImage={removeImage}
-      />
-
-      <VideosSection
-        uploadingVideo={uploadingVideo}
-        videoGalerija={videoGalerija}
-        noviVideo={noviVideo}
-        videoNaziv={videoNaziv}
-        setVideoNaziv={setVideoNaziv}
-        handleVideoChange={handleVideoChange}
-        handleAddVideo={handleAddVideo}
-        handleRemoveVideo={handleRemoveVideo}
-      />
-
-      <div className="form-section">
-        <h3>💰 Osnovna cena</h3>
-        <div className="form-group">
-          <label>Osnovna cena po detetu (RSD) *</label>
-          <input
-            type="number"
-            min="0"
-            name="osnovnaCena"
-            value={formData.osnovnaCena}
-            onChange={handleChange}
-            required
-          />
-        </div>
-      </div>
-
-      <ParentPricingSection
-        cenaRoditelja={cenaRoditelja}
-        handleCenaRoditeljaChange={handleCenaRoditeljaChange}
-      />
-
-      <AdditionalPricesSection
-        novaCena={novaCena}
-        setNovaCena={setNovaCena}
-        cene={cene}
-        handleAddCena={handleAddCena}
-        handleRemoveCena={handleRemoveCena}
-      />
-
-      <PackagesSection
-        noviPaket={noviPaket}
-        setNoviPaket={setNoviPaket}
-        paketi={paketi}
-        handleAddPaket={handleAddPaket}
-        handleRemovePaket={handleRemovePaket}
-      />
-
-      <AdditionalServicesSection
-        novaUsluga={novaUsluga}
-        setNovaUsluga={setNovaUsluga}
-        dodatneUsluge={dodatneUsluge}
-        handleAddUsluga={handleAddUsluga}
-        handleRemoveUsluga={handleRemoveUsluga}
-      />
-
-      <BenefitsSection
-        novaPogodnost={novaPogodnost}
-        setNovaPogodnost={setNovaPogodnost}
-        besplatnePogodnosti={besplatnePogodnosti}
-        handleAddPogodnost={handleAddPogodnost}
-        handleRemovePogodnost={handleRemovePogodnost}
-      />
-
-      <SocialLinksSection
-        drustveneMreze={drustveneMreze}
-        handleDrustveneMrezeChange={handleDrustveneMrezeChange}
-      />
-
-      <WorkingHoursSection
-        dani={DEFAULT_DANI}
-        radnoVreme={radnoVreme}
-        toggleDan={toggleDan}
-        handleRadnoVremeChange={handleRadnoVremeChange}
-      />
-
-      <div className="form-actions">
-        <button type="button" className="btn-cancel" onClick={onCancel}>
-          Otkaži
-        </button>
-        <button
-          type="submit"
-          className="btn-submit"
-          disabled={uploading || uploadingVideo}
-        >
-          {uploading
-            ? "Uploadujem slike..."
-            : uploadingVideo
-              ? "Uploadujem video..."
-              : isEditing
-                ? "💾 Sačuvaj promene"
-                : "✨ Kreiraj igraonicu"}
-        </button>
-      </div>
-    </form>
-  );
+  return {
+    formData,
+    error,
+    uploading,
+    uploadingVideo,
+    slike,
+    profilnaSlika,
+    videoGalerija,
+    noviVideo,
+    videoNaziv,
+    cene,
+    novaCena,
+    paketi,
+    noviPaket,
+    cenaRoditelja,
+    dodatneUsluge,
+    novaUsluga,
+    besplatnePogodnosti,
+    novaPogodnost,
+    drustveneMreze,
+    radnoVreme,
+    setVideoNaziv,
+    setNovaCena,
+    setNoviPaket,
+    setNovaUsluga,
+    setNovaPogodnost,
+    handleChange,
+    handleCenaRoditeljaChange,
+    handleDrustveneMrezeChange,
+    handleVideoChange,
+    handleAddVideo,
+    handleRemoveVideo,
+    handleRadnoVremeChange,
+    toggleDan,
+    handleAddCena,
+    handleRemoveCena,
+    handleAddPaket,
+    handleRemovePaket,
+    handleAddUsluga,
+    handleRemoveUsluga,
+    handleAddPogodnost,
+    handleRemovePogodnost,
+    handleFileChange,
+    removeImage,
+    removeProfilna,
+    handleSubmit,
+  };
 };
-
-export default PlayroomForm;

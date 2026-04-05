@@ -37,7 +37,7 @@ const run = async () => {
     process.exit(1);
   } finally {
     console.log("\n🏁 Završeno.");
-    process.exit(0);
+    process.exit(exitCode);
   }
 };
 
