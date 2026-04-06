@@ -124,6 +124,7 @@
 
 .playroom-summary {
   background: white;
+  border: 1px solid #eef2f7;
   border-radius: 20px;
   padding: 20px 24px;
   margin-bottom: 24px;
@@ -201,6 +202,7 @@
 
 .slot-card {
   background: white;
+  border-top: 1px solid #f1f5f9;
   border-radius: 20px;
   padding: 20px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
@@ -280,10 +282,15 @@
 
 /* SLOT BODY */
 
+.slot-body {
+  display: grid;
+  gap: 4px;
+}
 .slot-body p {
   margin: 8px 0;
   color: #334155;
   font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 /* BOOKING INFO */
@@ -293,12 +300,14 @@
   padding: 14px;
   border-radius: 14px;
   margin: 14px 0 0;
+  margin-top: 16px;
   font-size: 0.85rem;
   border: 1px solid #eef2f6;
 }
 
 .booking-info h4 {
   margin-bottom: 12px;
+  margin-top: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid #e2e8f0;
   color: #1e293b;
@@ -409,5 +418,13 @@
   .btn-primary {
     padding: 10px;
     font-size: 0.85rem;
+  }
+  .playroom-summary h2 {
+    font-size: 1.2rem;
+  }
+
+  .slot-status {
+    width: 100%;
+    justify-content: center;
   }
 }

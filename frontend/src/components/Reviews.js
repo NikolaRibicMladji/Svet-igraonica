@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { addReview, deleteReview, getReviews } from "../services/reviewService";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Reviews.css";
@@ -32,11 +32,16 @@ const Reviews = ({ playroomId }) => {
     };
 
     init();
-  }, [playroomId, page, isAuthenticated]);
+  }, [
+    playroomId,
+    isAuthenticated,
+    user?.role,
+    loadReviews,
+    checkIfUserCanReview,
+  ]);
 
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     setLoading(true);
-    setError("");
 
     try {
       const result = await getReviews(playroomId, page);
@@ -47,24 +52,26 @@ const Reviews = ({ playroomId }) => {
       } else {
         setReviews([]);
         setTotal(0);
-        setError(result?.error || "Greška pri učitavanju recenzija.");
+        toast.error(result?.error || "Greška pri učitavanju recenzija.");
       }
     } catch (err) {
       setReviews([]);
       setTotal(0);
-      setError(
+
+      const message =
         err?.response?.data?.message ||
-          err?.message ||
-          "Greška pri učitavanju recenzija.",
-      );
+        err?.message ||
+        "Greška pri učitavanju recenzija.";
+
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [playroomId, page, toast]);
 
-  const checkIfUserCanReview = async () => {
+  const checkIfUserCanReview = useCallback(async () => {
     try {
-      const res = await api.get(`/bookings/my`);
+      const res = await api.get("/bookings/my");
 
       if (res.data?.success) {
         const hasCompleted = res.data.data.some(
@@ -74,19 +81,21 @@ const Reviews = ({ playroomId }) => {
               : b.playroomId) === playroomId && b.status === "zavrseno",
         );
 
-        // 🔥 DA LI JE VEĆ OSTAVIO RECENZIJU
         const hasReview = reviews.some(
           (r) =>
             (typeof r.userId === "object" ? r.userId?._id : r.userId) ===
-            user.id,
+            user?.id,
         );
 
         setCanReview(hasCompleted && !hasReview);
+      } else {
+        setCanReview(false);
       }
     } catch (err) {
       console.error("Greška pri proveri review prava:", err);
+      setCanReview(false);
     }
-  };
+  }, [playroomId, reviews, user?.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,8 +117,6 @@ const Reviews = ({ playroomId }) => {
     }
 
     setSubmitting(true);
-    setError("");
-    setSuccess("");
 
     try {
       const result = await addReview(playroomId, rating, comment.trim());
@@ -144,8 +151,6 @@ const Reviews = ({ playroomId }) => {
     if (!confirmed) return;
 
     setDeletingId(id);
-    setError("");
-    setSuccess("");
 
     try {
       const result = await deleteReview(id);

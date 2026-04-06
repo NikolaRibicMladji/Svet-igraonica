@@ -11,12 +11,15 @@
 
 .dashboard-header h2 {
   margin-bottom: 8px;
+  font-size: 2rem;
+  color: #0f172a;
 }
 
 .playroom-name {
   color: #64748b;
   font-weight: 600;
   font-size: 1rem;
+  margin-top: 4px;
 }
 
 .dashboard-playroom-select {
@@ -115,7 +118,7 @@
 }
 
 .owner-bookings {
-  margin-top: 10px;
+  margin-top: 22px;
 }
 
 .confirmed-header {
@@ -162,6 +165,7 @@
 
 .booking-card {
   background: white;
+  min-height: 250px;
   border-radius: 20px;
   padding: 22px 20px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
@@ -181,6 +185,7 @@
   color: #475569;
   line-height: 1.5;
   word-break: break-word;
+  font-size: 0.95rem;
 }
 
 .booking-card strong {
@@ -190,7 +195,7 @@
 .booking-status-row {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .status-badge {
@@ -378,5 +383,14 @@
   .modal {
     padding: 18px 16px;
     max-height: 90vh;
+  }
+  @media (max-width: 480px) {
+    .dashboard-header h2 {
+      font-size: 1.6rem;
+    }
+
+    .modal-header h3 {
+      font-size: 1.1rem;
+    }
   }
 }

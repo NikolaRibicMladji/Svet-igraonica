@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyPlayrooms } from "../services/playroomService";
 import {
@@ -33,11 +33,42 @@ const OwnerTimeSlots = () => {
     }
   }, [authLoading]);
 
+  const loadTimeSlots = useCallback(async () => {
+    if (!selectedPlayroom) return;
+
+    setLoadingSlots(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const result = await getAllTimeSlotsForOwner(
+        selectedPlayroom,
+        selectedDate,
+      );
+
+      if (result?.success) {
+        setTimeSlots(Array.isArray(result.data) ? result.data : []);
+      } else {
+        setTimeSlots([]);
+        setError(result?.error || "Greška pri učitavanju termina.");
+      }
+    } catch (err) {
+      setTimeSlots([]);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Greška pri učitavanju termina.",
+      );
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, [selectedPlayroom, selectedDate]);
+
   useEffect(() => {
     if (selectedPlayroom) {
       loadTimeSlots();
     }
-  }, [selectedPlayroom, selectedDate]);
+  }, [selectedPlayroom, selectedDate, loadTimeSlots]);
 
   const loadPlayrooms = async () => {
     setLoadingPlayrooms(true);
@@ -69,37 +100,6 @@ const OwnerTimeSlots = () => {
       );
     } finally {
       setLoadingPlayrooms(false);
-    }
-  };
-
-  const loadTimeSlots = async () => {
-    if (!selectedPlayroom) return;
-
-    setLoadingSlots(true);
-    setError("");
-    setMessage("");
-
-    try {
-      const result = await getAllTimeSlotsForOwner(
-        selectedPlayroom,
-        selectedDate,
-      );
-
-      if (result?.success) {
-        setTimeSlots(Array.isArray(result.data) ? result.data : []);
-      } else {
-        setTimeSlots([]);
-        setError(result?.error || "Greška pri učitavanju termina.");
-      }
-    } catch (err) {
-      setTimeSlots([]);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Greška pri učitavanju termina.",
-      );
-    } finally {
-      setLoadingSlots(false);
     }
   };
 

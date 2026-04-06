@@ -76,7 +76,7 @@ const completeExpiredBookings = async () => {
 completeExpiredBookings();
 
 // Zakazivanje: svakih 30 minuta
-cron.schedule("*/30 * * * *", () => {
+cron.schedule("*/10 * * * *", () => {
   console.log("⏰ Cron job: Provera termina za završavanje...");
   completeExpiredBookings();
 });
