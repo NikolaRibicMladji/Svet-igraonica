@@ -3,10 +3,11 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { getOwnerBookings, confirmBooking } from "../services/bookingService";
 import "../styles/OwnerDashboard.css";
+import { useToast } from "../context/ToastContext";
 
 const OwnerDashboard = () => {
   const { user, loading: authLoading } = useAuth();
-
+  const toast = useToast();
   const [stats, setStats] = useState(null);
   const [myPlayrooms, setMyPlayrooms] = useState([]);
   const [selectedPlayroomId, setSelectedPlayroomId] = useState("");
@@ -125,19 +126,19 @@ const OwnerDashboard = () => {
       const res = await confirmBooking(bookingId);
 
       if (res?.success) {
+        toast.success(res.message || "Rezervacija je potvrđena.");
         await fetchBookings();
 
         if (selectedPlayroomId) {
           await fetchStats(selectedPlayroomId);
         }
       } else {
-        setError(res?.error || "Greška pri potvrdi rezervacije.");
+        toast.error(res?.error || "Greška pri potvrdi rezervacije.");
       }
     } catch (err) {
-      console.error("Greška pri potvrdi:", err);
-      setError(
-        err?.response?.data?.message || "Greška pri potvrdi rezervacije.",
-      );
+      const message =
+        err?.response?.data?.message || "Greška pri potvrdi rezervacije.";
+      toast.error(message);
     } finally {
       setConfirmingId("");
     }

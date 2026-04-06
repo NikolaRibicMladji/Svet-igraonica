@@ -22,6 +22,8 @@ import MyBookings from "./pages/MyBookings";
 import OwnerTimeSlots from "./pages/OwnerTimeSlots";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import "./styles/global.css";
+import { ToastProvider } from "./context/ToastContext";
+import ToastContainer from "./components/ToastContainer";
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -147,10 +149,13 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Router>
+          <ToastContainer />
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

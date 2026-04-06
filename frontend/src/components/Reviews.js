@@ -3,20 +3,19 @@ import { addReview, deleteReview, getReviews } from "../services/reviewService";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Reviews.css";
 import api from "../services/api";
+import { useToast } from "../context/ToastContext";
 
 const REVIEWS_PER_PAGE = 10;
 
 const Reviews = ({ playroomId }) => {
   const { user, isAuthenticated } = useAuth();
-
+  const toast = useToast();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [canReview, setCanReview] = useState(false);
@@ -94,17 +93,17 @@ const Reviews = ({ playroomId }) => {
     if (submitting) return;
 
     if (!isAuthenticated) {
-      setError("Morate biti prijavljeni da biste ostavili recenziju.");
+      toast.error("Morate biti prijavljeni da biste ostavili recenziju.");
       return;
     }
 
     if (user?.role !== "roditelj" && user?.role !== "admin") {
-      setError("Samo roditelj može da ostavi recenziju.");
+      toast.error("Samo roditelj može da ostavi recenziju.");
       return;
     }
 
     if (!comment.trim()) {
-      setError("Komentar je obavezan.");
+      toast.error("Komentar je obavezan.");
       return;
     }
 
@@ -116,25 +115,21 @@ const Reviews = ({ playroomId }) => {
       const result = await addReview(playroomId, rating, comment.trim());
 
       if (result?.success) {
-        setSuccess("Recenzija je uspešno dodata.");
+        toast.success("Recenzija je uspešno dodata.");
         setComment("");
         setRating(5);
         setPage(1);
         await loadReviews();
         setCanReview(false);
-
-        setTimeout(() => {
-          setSuccess("");
-        }, 3000);
       } else {
-        setError(result?.error || "Dodavanje recenzije nije uspelo.");
+        toast.error(result?.error || "Dodavanje recenzije nije uspelo.");
       }
     } catch (err) {
-      setError(
+      const message =
         err?.response?.data?.message ||
-          err?.message ||
-          "Dodavanje recenzije nije uspelo.",
-      );
+        err?.message ||
+        "Dodavanje recenzije nije uspelo.";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -156,27 +151,22 @@ const Reviews = ({ playroomId }) => {
       const result = await deleteReview(id);
 
       if (result?.success) {
-        setSuccess("Recenzija je uspešno obrisana.");
-
+        toast.success("Recenzija je uspešno obrisana.");
         if (reviews.length === 1 && page > 1) {
           setPage((prev) => prev - 1);
         } else {
           await loadReviews();
           setCanReview(true);
         }
-
-        setTimeout(() => {
-          setSuccess("");
-        }, 3000);
       } else {
-        setError(result?.error || "Brisanje recenzije nije uspelo.");
+        toast.error(result?.error || "Brisanje recenzije nije uspelo.");
       }
     } catch (err) {
-      setError(
+      const message =
         err?.response?.data?.message ||
-          err?.message ||
-          "Brisanje recenzije nije uspelo.",
-      );
+        err?.message ||
+        "Brisanje recenzije nije uspelo.";
+      toast.error(message);
     } finally {
       setDeletingId("");
     }
@@ -218,9 +208,6 @@ const Reviews = ({ playroomId }) => {
         <div className="review-form">
           <h4>Ostavite vašu recenziju</h4>
 
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
-
           <form onSubmit={handleSubmit}>
             <div className="rating-input">
               <label>Vaša ocena:</label>
@@ -250,10 +237,6 @@ const Reviews = ({ playroomId }) => {
           Recenziju možete ostaviti tek nakon završene rezervacije za ovu
           igraonicu.
         </div>
-      )}
-
-      {!isAuthenticated && error && (
-        <div className="error-message">{error}</div>
       )}
 
       {reviews.length === 0 ? (

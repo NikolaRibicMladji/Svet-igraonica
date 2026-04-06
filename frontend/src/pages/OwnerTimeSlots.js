@@ -8,11 +8,12 @@ import {
 import { useAuth } from "../context/AuthContext";
 import ManualBookingModal from "../components/ManualBookingModal";
 import "../styles/OwnerTimeSlots.css";
+import { useToast } from "../context/ToastContext";
 
 const OwnerTimeSlots = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-
+  const toast = useToast();
   const [playrooms, setPlayrooms] = useState([]);
   const [selectedPlayroom, setSelectedPlayroom] = useState("");
   const [timeSlots, setTimeSlots] = useState([]);
@@ -129,7 +130,9 @@ const OwnerTimeSlots = () => {
       const result = await manualBookTimeSlot(selectedSlot._id, bookingData);
 
       if (result?.success) {
-        setMessage(result.message || "Termin je uspešno zauzet.");
+        const successMessage = result.message || "Termin je uspešno zauzet.";
+        setMessage(successMessage);
+        toast.success(successMessage);
         closeManualBooking();
 
         await new Promise((resolve) => setTimeout(resolve, 200));
@@ -139,14 +142,14 @@ const OwnerTimeSlots = () => {
           setMessage("");
         }, 3000);
       } else {
-        setError(result?.error || "Greška pri ručnom zauzimanju termina.");
+        toast.error(result?.error || "Greška pri ručnom zauzimanju termina.");
       }
     } catch (err) {
-      setError(
+      const message =
         err?.response?.data?.message ||
-          err?.message ||
-          "Greška pri ručnom zauzimanju termina.",
-      );
+        err?.message ||
+        "Greška pri ručnom zauzimanju termina.";
+      toast.error(message);
       throw err;
     }
   };

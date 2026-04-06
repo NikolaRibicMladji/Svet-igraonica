@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cancelBooking, getMyBookings } from "../services/bookingService";
 import "../styles/MyBookings.css";
+import { useToast } from "../context/ToastContext";
 
 const MyBookings = () => {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,16 +57,17 @@ const MyBookings = () => {
       const result = await cancelBooking(id);
 
       if (result?.success) {
+        toast.success(result.message || "Rezervacija je uspešno otkazana.");
         await loadBookings();
       } else {
-        setError(result?.error || "Greška pri otkazivanju rezervacije.");
+        toast.error(result?.error || "Greška pri otkazivanju rezervacije.");
       }
     } catch (err) {
-      setError(
+      const message =
         err?.response?.data?.message ||
-          err?.message ||
-          "Greška pri otkazivanju rezervacije.",
-      );
+        err?.message ||
+        "Greška pri otkazivanju rezervacije.";
+      toast.error(message);
     } finally {
       setCancellingId("");
     }
