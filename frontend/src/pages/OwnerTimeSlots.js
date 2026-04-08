@@ -104,7 +104,6 @@ const OwnerTimeSlots = () => {
   };
 
   const openManualBooking = (slot) => {
-    if (!slot || slot.zauzeto) return;
     setSelectedSlot(slot);
     setMessage("");
     setError("");
@@ -205,7 +204,9 @@ const OwnerTimeSlots = () => {
     <div className="container owner-slots-page">
       <div className="page-header">
         <h1>📅 Termini igraonice</h1>
-        <p>Upravljanje terminima i ručne rezervacije</p>
+        <p>
+          Upravljanje terminima po pravilu: jedan termin = jedna rezervacija
+        </p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -297,7 +298,6 @@ const OwnerTimeSlots = () => {
 
                   <div className="slot-body">
                     <p>💰 Cena: {slot.cena || 0} RSD</p>
-                    <p>👶 Slobodnih mesta: {slot.slobodno ?? 0}</p>
 
                     {slot.booking ? (
                       <div className="booking-info">
@@ -305,9 +305,8 @@ const OwnerTimeSlots = () => {
                         <p>👤 {formatBookingName(slot.booking)}</p>
                         <p>📧 {formatBookingEmail(slot.booking)}</p>
                         <p>📞 {formatBookingPhone(slot.booking)}</p>
-                        <p>👶 Broj dece: {slot.booking.brojDece || 0}</p>
                         <p>
-                          👨‍👩‍👧 Broj roditelja: {slot.booking.brojRoditelja || 0}
+                          💰 Ukupna cena: {slot.booking.ukupnaCena || 0} RSD
                         </p>
                         {slot.booking.napomena && (
                           <p>📝 Napomena: {slot.booking.napomena}</p>

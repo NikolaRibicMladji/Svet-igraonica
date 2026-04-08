@@ -53,12 +53,10 @@ exports.createTimeSlot = async (req, res, next) => {
       datum: slotDate,
       vremeOd,
       vremeDo,
-      maxDece: playroom.kapacitet?.deca || 20,
-      slobodno: 1,
+      cena: Number(cena) || 0,
       zauzeto: false,
       aktivno: true,
       vanRadnogVremena: false,
-      cena,
     });
 
     res.status(201).json({
@@ -200,25 +198,7 @@ exports.updateTimeSlot = async (req, res, next) => {
       });
     }
 
-    const { maxDece, cena, aktivno } = req.body;
-
-    if (maxDece !== undefined) {
-      const parsedMaxDece = Number(maxDece);
-
-      const hasActiveBooking = await timeSlotService.hasActiveBookingForSlot(
-        timeSlot._id,
-      );
-
-      if (hasActiveBooking) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Ne možeš menjati kapacitet termina koji ima aktivnu rezervaciju",
-        });
-      }
-
-      timeSlot.maxDece = parsedMaxDece;
-    }
+    const { cena, aktivno } = req.body;
 
     if (cena !== undefined) {
       const parsedCena = Number(cena);
@@ -450,7 +430,7 @@ exports.getAllTimeSlotsForOwner = async (req, res, next) => {
       status: { $ne: BOOKING_STATUS.OTKAZANO },
     })
       .select(
-        "_id timeSlotId roditeljId imeRoditelja prezimeRoditelja emailRoditelja telefonRoditelja brojDece brojRoditelja napomena status createdAt",
+        "_id timeSlotId roditeljId imeRoditelja prezimeRoditelja emailRoditelja telefonRoditelja napomena status createdAt ukupnaCena",
       )
       .populate("roditeljId", "ime prezime email telefon");
 
@@ -471,8 +451,7 @@ exports.getAllTimeSlotsForOwner = async (req, res, next) => {
               prezimeRoditelja: foundBooking.prezimeRoditelja,
               emailRoditelja: foundBooking.emailRoditelja,
               telefonRoditelja: foundBooking.telefonRoditelja,
-              brojDece: foundBooking.brojDece,
-              brojRoditelja: foundBooking.brojRoditelja,
+              ukupnaCena: foundBooking.ukupnaCena,
               napomena: foundBooking.napomena,
               status: foundBooking.status,
               createdAt: foundBooking.createdAt,
@@ -506,13 +485,12 @@ exports.manualBookTimeSlot = async (req, res, next) => {
     session.startTransaction();
 
     const { id } = req.params;
-    const { brojDece, napomena } = req.body;
+    const { napomena } = req.body;
 
     const timeSlot = await TimeSlot.findById(id).session(session);
 
     if (!timeSlot) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Termin nije pronađen",
@@ -525,7 +503,6 @@ exports.manualBookTimeSlot = async (req, res, next) => {
 
     if (!playroom) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Igraonica nije pronađena",
@@ -537,21 +514,9 @@ exports.manualBookTimeSlot = async (req, res, next) => {
       req.user.role !== "admin"
     ) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(403).json({
         success: false,
         message: "Nemate pravo da zauzmete ovaj termin",
-      });
-    }
-
-    const parsedBrojDece = Number(brojDece || 1);
-
-    if (Number.isNaN(parsedBrojDece) || parsedBrojDece < 1) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: "Broj dece mora biti najmanje 1",
       });
     }
 
@@ -564,7 +529,6 @@ exports.manualBookTimeSlot = async (req, res, next) => {
 
     if (slotEnd <= new Date()) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Ne možeš ručno zauzeti prošli termin",
@@ -575,14 +539,12 @@ exports.manualBookTimeSlot = async (req, res, next) => {
       {
         _id: timeSlot._id,
         zauzeto: false,
-        slobodno: { $gt: 0 },
         aktivno: true,
         vanRadnogVremena: false,
       },
       {
         $set: {
           zauzeto: true,
-          slobodno: 0,
         },
       },
       {
@@ -593,14 +555,13 @@ exports.manualBookTimeSlot = async (req, res, next) => {
 
     if (!lockedSlot) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Termin je već zauzet, neaktivan ili ne postoji",
       });
     }
 
-    const ukupnaCena = (lockedSlot.cena || 0) * parsedBrojDece;
+    const ukupnaCena = Number(lockedSlot.cena) || 0;
 
     const created = await Booking.create(
       [
@@ -611,8 +572,6 @@ exports.manualBookTimeSlot = async (req, res, next) => {
           datum: lockedSlot.datum,
           vremeOd: lockedSlot.vremeOd,
           vremeDo: lockedSlot.vremeDo,
-          brojDece: parsedBrojDece,
-          brojRoditelja: 0,
           ukupnaCena,
           napomena:
             napomena ||
@@ -628,7 +587,6 @@ exports.manualBookTimeSlot = async (req, res, next) => {
     );
 
     await session.commitTransaction();
-    session.endSession();
 
     return res.status(200).json({
       success: true,
@@ -637,7 +595,8 @@ exports.manualBookTimeSlot = async (req, res, next) => {
     });
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
     next(error);
+  } finally {
+    session.endSession();
   }
 };

@@ -4,45 +4,44 @@ const BOOKING_STATUS = require("../constants/bookingStatus");
 const ErrorResponse = require("../utils/errorResponse");
 const mongoose = require("mongoose");
 
-const reserveSlot = async ({ slotId, user, payload }) => {
-  const session = await mongoose.startSession();
+const reserveSlot = async ({
+  slotId,
+  user,
+  payload,
+  session: externalSession = null,
+}) => {
+  const ownSession = !externalSession;
+  const session = externalSession || (await mongoose.startSession());
   let booking = null;
 
   try {
-    session.startTransaction();
+    if (ownSession) {
+      session.startTransaction();
+    }
 
     if (
       !payload?.imeRoditelja ||
       !payload?.prezimeRoditelja ||
       !payload?.emailRoditelja ||
-      !payload?.telefon
+      !payload?.telefonRoditelja
     ) {
       throw new ErrorResponse("Nedostaju podaci za rezervaciju", 400);
     }
 
-    const brojDece = Number(payload.brojDece || 1);
-    const brojRoditelja = Number(payload.brojRoditelja || 0);
-
-    if (Number.isNaN(brojDece) || brojDece < 1) {
-      throw new ErrorResponse("Broj dece mora biti validan", 400);
-    }
-
-    if (Number.isNaN(brojRoditelja) || brojRoditelja < 0) {
-      throw new ErrorResponse("Broj roditelja mora biti validan", 400);
+    if (!mongoose.Types.ObjectId.isValid(slotId)) {
+      throw new ErrorResponse("Nevalidan slot ID", 400);
     }
 
     const slot = await TimeSlot.findOneAndUpdate(
       {
         _id: slotId,
         zauzeto: false,
-        slobodno: { $gt: 0 },
         aktivno: true,
         vanRadnogVremena: false,
       },
       {
         $set: {
           zauzeto: true,
-          slobodno: 0,
         },
       },
       {
@@ -52,24 +51,21 @@ const reserveSlot = async ({ slotId, user, payload }) => {
     );
 
     if (!slot) {
-      throw new ErrorResponse(
-        "Termin je već zauzet, neaktivan ili ne postoji",
-        400,
-      );
+      throw new ErrorResponse("Termin je već zauzet ili ne postoji", 400);
     }
 
-    const slotDateTime = new Date(slot.datum);
+    const slotEnd = new Date(slot.datum);
     const [endHour, endMinute] = String(slot.vremeDo || "00:00")
       .split(":")
       .map((v) => parseInt(v, 10));
 
-    slotDateTime.setHours(endHour || 0, endMinute || 0, 0, 0);
+    slotEnd.setHours(endHour || 0, endMinute || 0, 0, 0);
 
-    if (slotDateTime <= new Date()) {
+    if (slotEnd <= new Date()) {
       throw new ErrorResponse("Ne možeš rezervisati prošli termin", 400);
     }
 
-    const ukupnaCena = (slot.cena || 0) * brojDece;
+    const ukupnaCena = Number(slot.cena) || 0;
 
     const created = await Booking.create(
       [
@@ -80,15 +76,13 @@ const reserveSlot = async ({ slotId, user, payload }) => {
           datum: slot.datum,
           vremeOd: slot.vremeOd,
           vremeDo: slot.vremeDo,
-          brojDece,
-          brojRoditelja,
           ukupnaCena,
           status: BOOKING_STATUS.CEKANJE,
           napomena: payload.napomena || "",
-          imeRoditelja: payload.imeRoditelja,
-          prezimeRoditelja: payload.prezimeRoditelja,
-          emailRoditelja: payload.emailRoditelja,
-          telefonRoditelja: payload.telefon,
+          imeRoditelja: payload.imeRoditelja.trim(),
+          prezimeRoditelja: payload.prezimeRoditelja.trim(),
+          emailRoditelja: payload.emailRoditelja.trim().toLowerCase(),
+          telefonRoditelja: payload.telefonRoditelja.trim(),
         },
       ],
       { session },
@@ -96,13 +90,20 @@ const reserveSlot = async ({ slotId, user, payload }) => {
 
     booking = created[0];
 
-    await session.commitTransaction();
+    if (ownSession) {
+      await session.commitTransaction();
+    }
+
     return booking;
   } catch (err) {
-    await session.abortTransaction();
+    if (ownSession) {
+      await session.abortTransaction();
+    }
     throw err;
   } finally {
-    session.endSession();
+    if (ownSession) {
+      session.endSession();
+    }
   }
 };
 
@@ -152,8 +153,13 @@ const handleBookingEmails = async (bookingId) => {
 const createBookingWithEmails = async (data) => {
   const booking = await reserveSlot(data);
 
-  // 🔥 email ide ovde, ne u controller
-  await handleBookingEmails(booking._id);
+  setImmediate(async () => {
+    try {
+      await handleBookingEmails(booking._id);
+    } catch (error) {
+      console.error("Greška pri slanju booking emailova:", error.message);
+    }
+  });
 
   return booking;
 };
@@ -211,31 +217,38 @@ const lockSlot = async (slotId) => {
     {
       _id: slotId,
       zauzeto: false,
-      slobodno: { $gt: 0 },
+
       aktivno: true,
       vanRadnogVremena: false,
     },
     {
       $set: {
         zauzeto: true,
-        slobodno: 0,
       },
     },
     { new: true },
   );
 };
 
-const unlockSlot = async (slotId) => {
-  const slot = await TimeSlot.findById(slotId);
+const unlockSlot = async (slotId, session = null) => {
+  if (!slotId || !mongoose.Types.ObjectId.isValid(slotId)) {
+    throw new ErrorResponse("Nevalidan slot ID za otključavanje", 400);
+  }
 
-  if (!slot) return null;
+  const options = { new: true };
+  if (session) {
+    options.session = session;
+  }
 
-  slot.zauzeto = false;
-  slot.slobodno = 1;
-
-  await slot.save();
-
-  return slot;
+  return TimeSlot.findByIdAndUpdate(
+    slotId,
+    {
+      $set: {
+        zauzeto: false,
+      },
+    },
+    options,
+  );
 };
 
 module.exports = {

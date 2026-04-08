@@ -45,25 +45,35 @@ const createParentUser = async ({
   telefon,
   role = ROLES.RODITELJ,
   deca = [],
+  session = null,
 }) => {
   const normalizedEmail = normalizeEmail(email);
 
-  const userExists = await User.findOne({ email: normalizedEmail });
+  const userExists = await User.findOne({ email: normalizedEmail }).session(
+    session,
+  );
   if (userExists) {
     throw createError("Korisnik sa ovom email adresom već postoji", 400);
   }
 
   const hashedPassword = await hashPassword(password);
 
-  const user = await User.create({
-    ime: ime?.trim(),
-    prezime: prezime?.trim(),
-    email: normalizedEmail,
-    password: hashedPassword,
-    telefon: telefon?.trim(),
-    role,
-    deca: Array.isArray(deca) ? deca : [],
-  });
+  const createdUsers = await User.create(
+    [
+      {
+        ime: ime?.trim(),
+        prezime: prezime?.trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+        telefon: telefon?.trim(),
+        role,
+        deca: Array.isArray(deca) ? deca : [],
+      },
+    ],
+    session ? { session } : {},
+  );
+
+  const user = createdUsers[0];
 
   return user;
 };
@@ -138,12 +148,14 @@ exports.refreshUserToken = async (refreshToken) => {
   return { accessToken };
 };
 
-exports.registerGuestParent = async (data) => {
+exports.registerGuestParent = async (data, session = null) => {
   const { ime, prezime, email, password, telefon } = data;
 
   const normalizedEmail = normalizeEmail(email);
 
-  const userExists = await User.findOne({ email: normalizedEmail });
+  const userExists = await User.findOne({ email: normalizedEmail }).session(
+    session,
+  );
   if (userExists) {
     throw createError(
       "Korisnik sa ovom email adresom već postoji. Prijavite se da biste završili rezervaciju.",
@@ -159,6 +171,7 @@ exports.registerGuestParent = async (data) => {
     telefon,
     role: ROLES.RODITELJ,
     deca: [],
+    session,
   });
 
   const { accessToken, refreshToken } = generateAuthResponse(user);

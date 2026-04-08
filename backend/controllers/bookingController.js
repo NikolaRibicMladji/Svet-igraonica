@@ -4,6 +4,7 @@ const Playroom = require("../models/Playroom");
 const bookingService = require("../services/bookingService");
 const User = require("../models/User");
 const authService = require("../services/authService");
+const mongoose = require("mongoose");
 
 const BOOKING_STATUS = require("../constants/bookingStatus");
 
@@ -16,14 +17,11 @@ exports.createBooking = async (req, res, next) => {
       slotId: req.body.slotId,
       user: req.user || null,
       payload: {
-        imeRoditelja: req.body.imeRoditelja || req.body.ime,
-        prezimeRoditelja: req.body.prezimeRoditelja || req.body.prezime || "-",
-        emailRoditelja:
-          req.body.emailRoditelja || req.body.email || "nije-uneto@example.com",
-        telefon: req.body.telefon,
-        brojDece: req.body.brojDece,
-        brojRoditelja: req.body.brojRoditelja,
-        napomena: req.body.napomena,
+        imeRoditelja: req.body.imeRoditelja || req.body.ime || "",
+        prezimeRoditelja: req.body.prezimeRoditelja || req.body.prezime || "",
+        emailRoditelja: req.body.emailRoditelja || req.body.email || "",
+        telefonRoditelja: req.body.telefonRoditelja || req.body.telefon || "",
+        napomena: req.body.napomena || "",
       },
     });
 
@@ -40,47 +38,65 @@ exports.createBooking = async (req, res, next) => {
 // @desc    Guest rezervacija + registracija + auto login
 // @route   POST /api/bookings/guest
 // @access  Public
+// @desc    Guest rezervacija + registracija + auto login
+// @route   POST /api/bookings/guest
+// @access  Public
+// @desc    Guest rezervacija + registracija + auto login
+// @route   POST /api/bookings/guest
+// @access  Public
 exports.createGuestBooking = async (req, res, next) => {
-  let createdUser = null;
+  const session = await mongoose.startSession();
 
   try {
-    const {
-      slotId,
-      ime,
-      prezime,
-      email,
-      telefon,
-      password,
-      brojDece,
-      brojRoditelja,
-      napomena,
-    } = req.body;
+    session.startTransaction();
 
-    const { user, accessToken, refreshToken } =
-      await authService.registerGuestParent({
+    const { slotId, ime, prezime, email, telefon, password, napomena } =
+      req.body;
+
+    const authResult = await authService.registerGuestParent(
+      {
         ime,
         prezime,
         email,
         password,
         telefon,
-      });
+      },
+      session,
+    );
 
-    createdUser = user;
+    const createdUser = authResult.user;
+    const accessToken = authResult.accessToken;
+    const refreshToken = authResult.refreshToken;
+
+    const createdBooking = await bookingService.reserveSlot({
+      slotId,
+      user: createdUser,
+      payload: {
+        imeRoditelja: createdUser.ime,
+        prezimeRoditelja: createdUser.prezime,
+        emailRoditelja: createdUser.email,
+        telefonRoditelja: createdUser.telefon,
+        napomena: napomena || "",
+      },
+      session,
+    });
+
+    await session.commitTransaction();
 
     res.cookie("refreshToken", refreshToken, authService.cookieOptions);
 
-    const booking = await bookingService.createBookingWithEmails({
-      slotId,
-      user,
-      payload: {
-        imeRoditelja: user.ime,
-        prezimeRoditelja: user.prezime,
-        emailRoditelja: user.email,
-        telefon: user.telefon,
-        brojDece,
-        brojRoditelja,
-        napomena,
-      },
+    setImmediate(async () => {
+      try {
+        await bookingService.sendConfirmationEmail({
+          ...createdBooking.toObject(),
+          roditeljId: createdUser,
+        });
+      } catch (emailError) {
+        console.error(
+          "Greška pri slanju emaila nakon guest rezervacije:",
+          emailError.message,
+        );
+      }
     });
 
     return res.status(201).json({
@@ -88,28 +104,20 @@ exports.createGuestBooking = async (req, res, next) => {
       message: "Uspešna registracija i rezervacija",
       accessToken,
       user: {
-        id: user._id,
-        ime: user.ime,
-        prezime: user.prezime,
-        email: user.email,
-        telefon: user.telefon,
-        role: user.role,
+        id: createdUser._id,
+        ime: createdUser.ime,
+        prezime: createdUser.prezime,
+        email: createdUser.email,
+        telefon: createdUser.telefon,
+        role: createdUser.role,
       },
-      data: booking,
+      data: createdBooking,
     });
   } catch (error) {
-    if (createdUser?._id) {
-      try {
-        await User.findByIdAndDelete(createdUser._id);
-      } catch (rollbackError) {
-        console.error(
-          "Rollback nije uspeo nakon pada guest rezervacije:",
-          rollbackError.message,
-        );
-      }
-    }
-
+    await session.abortTransaction();
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -173,7 +181,6 @@ exports.cancelBooking = async (req, res, next) => {
 
     if (!booking) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Rezervacija nije pronađena",
@@ -194,7 +201,6 @@ exports.cancelBooking = async (req, res, next) => {
 
     if (!isOwnerOfBooking && !isPlayroomOwner && !isAdmin) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(403).json({
         success: false,
         message: "Nemate pravo da otkažete ovu rezervaciju",
@@ -203,7 +209,6 @@ exports.cancelBooking = async (req, res, next) => {
 
     if (booking.status === BOOKING_STATUS.OTKAZANO) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Rezervacija je već otkazana",
@@ -212,31 +217,33 @@ exports.cancelBooking = async (req, res, next) => {
 
     if (booking.status === BOOKING_STATUS.ZAVRSENO) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Završena rezervacija ne može biti otkazana",
       });
     }
 
-    // 🔥 UPDATE BOOKING
     booking.status = BOOKING_STATUS.OTKAZANO;
     await booking.save({ session });
 
-    // 🔥 UNLOCK SLOT (ATOMIC)
-    await TimeSlot.findByIdAndUpdate(
+    const unlockedSlot = await TimeSlot.findByIdAndUpdate(
       booking.timeSlotId,
       {
         $set: {
           zauzeto: false,
-          slobodno: 1,
         },
       },
-      { session },
+      {
+        new: true,
+        session,
+      },
     );
 
+    if (!unlockedSlot) {
+      throw new Error("Slot za ovu rezervaciju nije pronađen");
+    }
+
     await session.commitTransaction();
-    session.endSession();
 
     await bookingService.sendCancellationEmail(booking);
 
@@ -246,8 +253,9 @@ exports.cancelBooking = async (req, res, next) => {
     });
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 

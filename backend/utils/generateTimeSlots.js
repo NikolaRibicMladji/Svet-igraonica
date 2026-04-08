@@ -114,8 +114,7 @@ const createSlotPayload = (playroom, date, vremeOd, vremeDo) => ({
   datum: getStartOfDay(date),
   vremeOd,
   vremeDo,
-  maxDece: playroom.kapacitet?.deca || DEFAULT_CAPACITY,
-  slobodno: 1,
+ 
   cena: playroom.osnovnaCena ?? DEFAULT_PRICE,
   zauzeto: false,
   aktivno: true,

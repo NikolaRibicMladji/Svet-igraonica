@@ -123,7 +123,7 @@ const ManageTimeSlots = () => {
   };
 
   const handleSlotClick = (slot) => {
-    if (!slot || slot.zauzeto || Number(slot.slobodno) === 0) return;
+    if (!slot || slot.zauzeto) return;
 
     setSelectedSlot(slot);
     setBrojDece(1);
@@ -136,14 +136,13 @@ const ManageTimeSlots = () => {
     if (!selectedSlot?._id) return;
 
     const broj = Number(brojDece);
-    const maxDece = Number(selectedSlot.slobodno || selectedSlot.maxDece || 1);
 
     if (!Number.isInteger(broj) || broj < 1) {
       setError("Broj dece mora biti najmanje 1.");
       return;
     }
 
-    if (broj > maxDece) {
+    {
       setError(`Maksimalan broj dece za ovaj termin je ${maxDece}.`);
       return;
     }
@@ -194,7 +193,7 @@ const ManageTimeSlots = () => {
   };
 
   const getSlotStatus = (slot) => {
-    if (slot?.zauzeto || Number(slot?.slobodno) === 0) {
+    if (slot?.zauzeto) {
       return { text: "ZAUZETO", class: "slot-booked", disabled: true };
     }
 
@@ -245,15 +244,12 @@ const ManageTimeSlots = () => {
 
   const hasAvailableSlot = (day) => {
     const slots = getSlotsForDay(day);
-    return slots.some((slot) => !slot.zauzeto && Number(slot.slobodno) > 0);
+    return slots.some((slot) => !slot.zauzeto);
   };
 
   const isFullyBooked = (day) => {
     const slots = getSlotsForDay(day);
-    return (
-      slots.length > 0 &&
-      slots.every((slot) => slot.zauzeto || Number(slot.slobodno) === 0)
-    );
+    return slots.length > 0 && slots.every((slot) => slot.zauzeto);
   };
 
   const changeMonth = (offset) => {
@@ -432,9 +428,6 @@ const ManageTimeSlots = () => {
                   </div>
 
                   <div className="slot-info">
-                    <span>
-                      👥 {slot.slobodno}/{slot.maxDece}
-                    </span>
                     <span>💰 {slot.cena} RSD</span>
                   </div>
 
@@ -483,11 +476,10 @@ const ManageTimeSlots = () => {
                   id="manual-booking-broj-dece"
                   type="number"
                   min="1"
-                  max={selectedSlot.slobodno}
                   value={brojDece}
                   onChange={(e) => {
                     const value = Number(e.target.value);
-                    const max = Number(selectedSlot.slobodno || 1);
+
                     setBrojDece(
                       Number.isFinite(value) && value > 0
                         ? Math.min(max, value)

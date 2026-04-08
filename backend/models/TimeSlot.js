@@ -27,18 +27,6 @@ const TimeSlotSchema = new mongoose.Schema(
       trim: true,
     },
 
-    maxDece: {
-      type: Number,
-      default: 20,
-      min: 0,
-    },
-
-    slobodno: {
-      type: Number,
-      default: 1,
-      min: 0,
-    },
-
     zauzeto: {
       type: Boolean,
       default: false,
@@ -75,13 +63,13 @@ const TimeSlotSchema = new mongoose.Schema(
   },
 );
 
-// 🔒 jedinstven slot
+// jedinstven slot
 TimeSlotSchema.index(
   { playroomId: 1, datum: 1, vremeOd: 1, vremeDo: 1 },
   { unique: true },
 );
 
-// ⚡ brzi query za frontend
+// brzi query za frontend
 TimeSlotSchema.index({
   playroomId: 1,
   datum: 1,
@@ -89,24 +77,11 @@ TimeSlotSchema.index({
   vanRadnogVremena: 1,
 });
 
-// ⚡ brzi query za owner dashboard
+// brzi query za owner dashboard
 TimeSlotSchema.index({
   playroomId: 1,
   datum: 1,
   zauzeto: 1,
-});
-
-TimeSlotSchema.index({ datum: 1 });
-
-// 🔒 automatski sync zauzeto/slobodno
-TimeSlotSchema.pre("save", function (next) {
-  if (this.zauzeto) {
-    this.slobodno = 0;
-  } else {
-    this.slobodno = 1;
-  }
-
-  next();
 });
 
 module.exports = mongoose.model("TimeSlot", TimeSlotSchema);

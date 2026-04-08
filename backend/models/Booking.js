@@ -21,6 +21,7 @@ const BookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TimeSlot",
       required: true,
+      index: true,
     },
 
     datum: {
@@ -32,23 +33,13 @@ const BookingSchema = new mongoose.Schema(
     vremeOd: {
       type: String,
       required: true,
+      trim: true,
     },
 
     vremeDo: {
       type: String,
       required: true,
-    },
-
-    brojDece: {
-      type: Number,
-      default: 1,
-      min: 1,
-    },
-
-    brojRoditelja: {
-      type: Number,
-      default: 0,
-      min: 0,
+      trim: true,
     },
 
     ukupnaCena: {
@@ -105,16 +96,21 @@ const BookingSchema = new mongoose.Schema(
   },
 );
 
-// ⚡ Brži query za owner dashboard
+// Sprečava duple rezervacije za isti slot osim otkazanih
+BookingSchema.index(
+  { timeSlotId: 1, status: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $ne: BOOKING_STATUS.OTKAZANO },
+    },
+  },
+);
+
+// Brži query za owner dashboard
 BookingSchema.index({ playroomId: 1, datum: 1 });
 
-// ⚡ Brži query za user istoriju
+// Brži query za korisnik istoriju
 BookingSchema.index({ roditeljId: 1, createdAt: -1 });
-
-BookingSchema.index({ timeSlotId: 1 }, { unique: true });
-
-BookingSchema.index({ playroomId: 1, status: 1, datum: 1 });
-
-BookingSchema.index({ status: 1, datum: 1 });
 
 module.exports = mongoose.model("Booking", BookingSchema);

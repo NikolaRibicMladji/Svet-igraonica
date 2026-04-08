@@ -15,26 +15,16 @@ const createBookingSchema = z.object({
 
     emailRoditelja: z.string().email("Neispravan email").toLowerCase().trim(),
 
-    telefon: z
+    telefonRoditelja: z
       .string()
       .min(6, "Telefon mora imati bar 6 cifara")
       .regex(/^[0-9+ ]+$/, "Telefon može sadržati samo brojeve")
       .trim(),
 
-    brojDece: z.coerce
-      .number({
-        required_error: "Broj dece je obavezan",
-      })
-      .min(1, "Mora biti bar 1 dete")
-      .max(50, "Previše dece"),
-
-    brojRoditelja: z.coerce
-      .number()
-      .min(0, "Ne može biti negativno")
-      .max(50, "Previše roditelja")
+    napomena: z
+      .string()
+      .max(500, "Napomena može imati najviše 500 karaktera")
       .optional(),
-
-    napomena: z.string().max(500).optional(),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
@@ -63,20 +53,10 @@ const createGuestBookingSchema = z
         .string()
         .min(6, "Potvrda lozinke mora imati bar 6 karaktera"),
 
-      brojDece: z.coerce
-        .number({
-          required_error: "Broj dece je obavezan",
-        })
-        .min(1, "Mora biti bar 1 dete")
-        .max(50, "Previše dece"),
-
-      brojRoditelja: z.coerce
-        .number()
-        .min(0, "Ne može biti negativno")
-        .max(50, "Previše roditelja")
+      napomena: z
+        .string()
+        .max(500, "Napomena može imati najviše 500 karaktera")
         .optional(),
-
-      napomena: z.string().max(500).optional(),
     }),
     params: z.object({}).optional(),
     query: z.object({}).optional(),

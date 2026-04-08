@@ -20,26 +20,6 @@ const Reviews = ({ playroomId }) => {
   const [total, setTotal] = useState(0);
   const [canReview, setCanReview] = useState(false);
 
-  useEffect(() => {
-    if (!playroomId) return;
-
-    const init = async () => {
-      await loadReviews();
-
-      if (isAuthenticated && user?.role === "roditelj") {
-        await checkIfUserCanReview();
-      }
-    };
-
-    init();
-  }, [
-    playroomId,
-    isAuthenticated,
-    user?.role,
-    loadReviews,
-    checkIfUserCanReview,
-  ]);
-
   const loadReviews = useCallback(async () => {
     setLoading(true);
 
@@ -96,6 +76,21 @@ const Reviews = ({ playroomId }) => {
       setCanReview(false);
     }
   }, [playroomId, reviews, user?.id]);
+
+  useEffect(() => {
+    if (!playroomId) return;
+    loadReviews();
+  }, [playroomId, page, loadReviews]);
+
+  useEffect(() => {
+    if (!playroomId) return;
+
+    if (isAuthenticated && user?.role === "roditelj") {
+      checkIfUserCanReview();
+    } else {
+      setCanReview(false);
+    }
+  }, [playroomId, isAuthenticated, user?.role, reviews, checkIfUserCanReview]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
