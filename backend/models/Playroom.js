@@ -21,84 +21,76 @@ const dnevnoRadnoVremeSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const stavkaCenovnikaSchema = new mongoose.Schema(
-  {
-    naziv: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-    cena: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    tip: {
-      type: String,
-      enum: ["fiksno", "po_osobi"],
-      default: "fiksno",
-    },
-    opis: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
-    },
+const stavkaCenovnikaSchema = new mongoose.Schema({
+  naziv: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100,
   },
-  { _id: false },
-);
+  cena: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  tip: {
+    type: String,
+    enum: ["fiksno", "po_osobi", "po_satu"],
+    default: "fiksno",
+  },
 
-const paketSchema = new mongoose.Schema(
-  {
-    naziv: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-    cena: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    opis: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
-    },
+  opis: {
+    type: String,
+    default: "",
+    trim: true,
+    maxlength: 500,
   },
-  { _id: false },
-);
+});
 
-const dodatnaUslugaSchema = new mongoose.Schema(
-  {
-    naziv: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-    cena: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    opis: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
-    },
-    tip: {
-      type: String,
-      enum: ["po_osobi", "fiksno"],
-      default: "fiksno",
-    },
+const paketSchema = new mongoose.Schema({
+  naziv: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100,
   },
-  { _id: false },
-);
+  cena: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  opis: {
+    type: String,
+    default: "",
+    trim: true,
+    maxlength: 500,
+  },
+});
+
+const dodatnaUslugaSchema = new mongoose.Schema({
+  naziv: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100,
+  },
+  cena: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  opis: {
+    type: String,
+    default: "",
+    trim: true,
+    maxlength: 500,
+  },
+  tip: {
+    type: String,
+    enum: ["po_osobi", "fiksno", "po_satu"],
+    default: "fiksno",
+  },
+});
 
 const slikaSchema = new mongoose.Schema(
   {
@@ -228,16 +220,13 @@ const PlayroomSchema = new mongoose.Schema(
       },
     },
 
-    osnovnaCena: {
-      type: Number,
-      required: [true, "Osnovna cena je obavezna"],
-      min: 0,
-      index: true,
-    },
-
     cene: {
       type: [stavkaCenovnikaSchema],
       default: [],
+      validate: {
+        validator: (v) => Array.isArray(v) && v.length > 0,
+        message: "Mora postojati bar jedna cena",
+      },
     },
 
     paketi: {
@@ -317,19 +306,6 @@ const PlayroomSchema = new mongoose.Schema(
       tiktok: { type: String, default: "", trim: true },
       website: { type: String, default: "", trim: true },
     },
-
-    cenaRoditelja: {
-      tip: {
-        type: String,
-        enum: ["ne_naplacuje", "fiksno", "po_osobi"],
-        default: "ne_naplacuje",
-      },
-      iznos: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-    },
   },
   {
     timestamps: true,
@@ -337,7 +313,7 @@ const PlayroomSchema = new mongoose.Schema(
 );
 
 PlayroomSchema.index({ grad: 1, status: 1, verifikovan: 1 });
-PlayroomSchema.index({ osnovnaCena: 1, status: 1, verifikovan: 1 });
+
 PlayroomSchema.index({ rating: -1, reviewCount: -1 });
 
 PlayroomSchema.index({ vlasnikId: 1, createdAt: -1 });

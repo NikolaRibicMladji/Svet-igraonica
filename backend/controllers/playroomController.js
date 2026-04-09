@@ -95,12 +95,6 @@ exports.getAllPlayrooms = async (req, res, next) => {
       query.grad = grad;
     }
 
-    if (minCena || maxCena) {
-      query.osnovnaCena = {};
-      if (minCena) query.osnovnaCena.$gte = parseInt(minCena, 10);
-      if (maxCena) query.osnovnaCena.$lte = parseInt(maxCena, 10);
-    }
-
     if (minRating && minRating !== "sve") {
       query.rating = { $gte: parseInt(minRating, 10) };
     }
@@ -118,8 +112,6 @@ exports.getAllPlayrooms = async (req, res, next) => {
 
     let sort = { createdAt: -1 };
     if (sortBy === "rating") sort = { rating: -1 };
-    if (sortBy === "price_asc") sort = { osnovnaCena: 1 };
-    if (sortBy === "price_desc") sort = { osnovnaCena: -1 };
 
     const playrooms = await Playroom.find(query).select("-__v").sort(sort);
 

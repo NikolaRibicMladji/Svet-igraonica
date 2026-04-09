@@ -6,7 +6,7 @@ import SocialLinksSection from "./playroom-form/SocialLinksSection";
 import WorkingHoursSection from "./playroom-form/WorkingHoursSection";
 import ImagesSection from "./playroom-form/ImagesSection";
 import VideosSection from "./playroom-form/VideosSection";
-import ParentPricingSection from "./playroom-form/ParentPricingSection";
+
 import AdditionalPricesSection from "./playroom-form/AdditionalPricesSection";
 import PackagesSection from "./playroom-form/PackagesSection";
 import AdditionalServicesSection from "./playroom-form/AdditionalServicesSection";
@@ -34,7 +34,7 @@ const PlayroomForm = ({
     novaCena,
     paketi,
     noviPaket,
-    cenaRoditelja,
+
     dodatneUsluge,
     novaUsluga,
     besplatnePogodnosti,
@@ -47,7 +47,7 @@ const PlayroomForm = ({
     setNovaUsluga,
     setNovaPogodnost,
     handleChange,
-    handleCenaRoditeljaChange,
+
     handleDrustveneMrezeChange,
     handleVideoChange,
     handleAddVideo,
@@ -107,26 +107,6 @@ const PlayroomForm = ({
         handleVideoChange={handleVideoChange}
         handleAddVideo={handleAddVideo}
         handleRemoveVideo={handleRemoveVideo}
-      />
-
-      <div className="form-group">
-        <label>Osnovna cena po detetu (RSD) *</label>
-        <input
-          type="number"
-          min="0"
-          name="osnovnaCena"
-          value={formData.osnovnaCena}
-          onChange={handleChange}
-          className={errors.osnovnaCena ? "input-error" : ""}
-        />
-        {errors.osnovnaCena && (
-          <div className="field-error">{errors.osnovnaCena}</div>
-        )}
-      </div>
-
-      <ParentPricingSection
-        cenaRoditelja={cenaRoditelja}
-        handleCenaRoditeljaChange={handleCenaRoditeljaChange}
       />
 
       <AdditionalPricesSection

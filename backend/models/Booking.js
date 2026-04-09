@@ -48,6 +48,79 @@ const BookingSchema = new mongoose.Schema(
       min: 0,
     },
 
+    brojDece: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+
+    izabranaCena: {
+      naziv: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      cena: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      tip: {
+        type: String,
+        enum: ["fiksno", "po_osobi", "po_satu"],
+        default: "fiksno",
+      },
+      opis: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+    },
+
+    izabraniPaket: {
+      naziv: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      cena: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      opis: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+    },
+
+    izabraneUsluge: {
+      type: [
+        {
+          naziv: {
+            type: String,
+            trim: true,
+          },
+          cena: {
+            type: Number,
+            min: 0,
+          },
+          tip: {
+            type: String,
+            enum: ["fiksno", "po_osobi", "po_satu"],
+            default: "fiksno",
+          },
+          opis: {
+            type: String,
+            default: "",
+            trim: true,
+          },
+        },
+      ],
+      default: [],
+    },
+
     status: {
       type: String,
       enum: Object.values(BOOKING_STATUS),

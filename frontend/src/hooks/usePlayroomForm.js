@@ -19,11 +19,6 @@ const DEFAULT_DRUSTVENE_MREZE = {
   website: "",
 };
 
-const DEFAULT_CENA_RODITELJA = {
-  tip: "ne_naplacuje",
-  iznos: "",
-};
-
 export const DEFAULT_DANI = [
   { key: "ponedeljak", naziv: "Ponedeljak" },
   { key: "utorak", naziv: "Utorak" },
@@ -57,7 +52,6 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
         deca: initialData?.kapacitet?.deca || "",
         roditelji: initialData?.kapacitet?.roditelji || "",
       },
-      osnovnaCena: initialData?.osnovnaCena || "",
     }),
     [initialData],
   );
@@ -69,8 +63,8 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
   const [novaCena, setNovaCena] = useState({
     naziv: "",
     cena: "",
-    opis: "",
     tip: "fiksno",
+    opis: "",
   });
 
   const [videoGalerija, setVideoGalerija] = useState(
@@ -98,10 +92,6 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
     Array.isArray(initialData?.paketi) ? initialData.paketi : [],
   );
   const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
-
-  const [cenaRoditelja, setCenaRoditelja] = useState(
-    initialData?.cenaRoditelja || DEFAULT_CENA_RODITELJA,
-  );
 
   const [dodatneUsluge, setDodatneUsluge] = useState(
     Array.isArray(initialData?.dodatneUsluge) ? initialData.dodatneUsluge : [],
@@ -164,8 +154,6 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
     setPaketi(Array.isArray(initialData?.paketi) ? initialData.paketi : []);
     setNoviPaket({ naziv: "", cena: "", opis: "" });
 
-    setCenaRoditelja(initialData?.cenaRoditelja || DEFAULT_CENA_RODITELJA);
-
     setDodatneUsluge(
       Array.isArray(initialData?.dodatneUsluge)
         ? initialData.dodatneUsluge
@@ -216,15 +204,6 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
 
     return () => clearTimeout(timer);
   }, [error]);
-
-  const handleCenaRoditeljaChange = (e) => {
-    const { name, value } = e.target;
-    setCenaRoditelja((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "tip" && value === "ne_naplacuje" ? { iznos: "" } : {}),
-    }));
-  };
 
   const handleDrustveneMrezeChange = (e) => {
     const { name, value } = e.target;
@@ -367,10 +346,12 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
   };
 
   const handleAddCena = () => {
-    const naziv = sanitizeText(novaCena.naziv);
+    const naziv = novaCena.naziv.trim();
     const cena = Number(novaCena.cena);
 
-    if (!naziv || !Number.isFinite(cena) || cena <= 0) return;
+    if (!naziv || !Number.isFinite(cena) || cena < 0) {
+      return;
+    }
 
     setCene((prev) => [
       ...prev,
@@ -378,11 +359,16 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
         naziv,
         cena,
         tip: novaCena.tip || "fiksno",
-        opis: sanitizeText(novaCena.opis),
+        opis: novaCena.opis.trim(),
       },
     ]);
 
-    setNovaCena({ naziv: "", cena: "", opis: "", tip: "fiksno" });
+    setNovaCena({
+      naziv: "",
+      cena: "",
+      tip: "fiksno",
+      opis: "",
+    });
   };
 
   const handleRemoveCena = (index) => {
@@ -577,15 +563,6 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
       }
     }
 
-    if (!formData.osnovnaCena && formData.osnovnaCena !== 0) {
-      newErrors.osnovnaCena = "Osnovna cena je obavezna.";
-    } else {
-      const osnovnaCena = Number(formData.osnovnaCena);
-      if (!Number.isFinite(osnovnaCena) || osnovnaCena < 0) {
-        newErrors.osnovnaCena = "Osnovna cena mora biti validan broj.";
-      }
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -611,7 +588,7 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
           ? toNumberOrZero(formData.kapacitet.roditelji)
           : 0,
       },
-      osnovnaCena: toNumberOrZero(formData.osnovnaCena),
+
       cene: cene.map((c) => ({
         naziv: sanitizeText(c.naziv),
         cena: toNumberOrZero(c.cena),
@@ -639,13 +616,7 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
         tiktok: sanitizeText(drustveneMreze.tiktok),
         website: sanitizeText(drustveneMreze.website),
       },
-      cenaRoditelja: {
-        tip: cenaRoditelja.tip,
-        iznos:
-          cenaRoditelja.tip === "ne_naplacuje"
-            ? 0
-            : toNumberOrZero(cenaRoditelja.iznos),
-      },
+
       radnoVreme: {},
     };
 
@@ -681,7 +652,7 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
     novaCena,
     paketi,
     noviPaket,
-    cenaRoditelja,
+
     dodatneUsluge,
     novaUsluga,
     besplatnePogodnosti,
@@ -694,7 +665,7 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
     setNovaUsluga,
     setNovaPogodnost,
     handleChange,
-    handleCenaRoditeljaChange,
+
     handleDrustveneMrezeChange,
     handleVideoChange,
     handleAddVideo,

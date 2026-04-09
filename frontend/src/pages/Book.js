@@ -13,7 +13,10 @@ const Book = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-
+  const [selectedCenaId, setSelectedCenaId] = useState("");
+  const [selectedPaketId, setSelectedPaketId] = useState("");
+  const [selectedUslugeIds, setSelectedUslugeIds] = useState([]);
+  const [brojDece, setBrojDece] = useState(1);
   const bookingFormRef = useRef(null);
   const topRef = useRef(null);
 
@@ -146,13 +149,92 @@ const Book = () => {
     }, 100);
   };
 
-  const cenaTermina = Number(selectedSlot?.cena || 0);
+  const selectedCena = Array.isArray(playroom?.cene)
+    ? playroom.cene.find((c) => String(c._id) === String(selectedCenaId))
+    : null;
+
+  const selectedPaket = Array.isArray(playroom?.paketi)
+    ? playroom.paketi.find((p) => String(p._id) === String(selectedPaketId))
+    : null;
+
+  const selectedUsluge = Array.isArray(playroom?.dodatneUsluge)
+    ? playroom.dodatneUsluge.filter((u) =>
+        selectedUslugeIds.includes(String(u._id)),
+      )
+    : [];
+
+  const getSlotDurationInHours = () => {
+    if (!selectedSlot?.vremeOd || !selectedSlot?.vremeDo) return 1;
+
+    const [startH, startM] = selectedSlot.vremeOd.split(":").map(Number);
+    const [endH, endM] = selectedSlot.vremeDo.split(":").map(Number);
+
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const diff = endMinutes - startMinutes;
+
+    if (!Number.isFinite(diff) || diff <= 0) return 1;
+
+    return diff / 60;
+  };
+
+  const calculateTotal = () => {
+    let total = 0;
+    const trajanjeSati = getSlotDurationInHours();
+    const brojDeceNum = Number(brojDece) || 0;
+
+    if (selectedCena) {
+      if (selectedCena.tip === "fiksno") {
+        total += Number(selectedCena.cena) || 0;
+      }
+
+      if (selectedCena.tip === "po_osobi") {
+        total += (Number(selectedCena.cena) || 0) * brojDeceNum;
+      }
+
+      if (selectedCena.tip === "po_satu") {
+        total += (Number(selectedCena.cena) || 0) * trajanjeSati;
+      }
+    }
+
+    if (selectedPaket) {
+      total += Number(selectedPaket.cena) || 0;
+    }
+
+    selectedUsluge.forEach((u) => {
+      if (u.tip === "fiksno") {
+        total += Number(u.cena) || 0;
+      }
+
+      if (u.tip === "po_osobi") {
+        total += (Number(u.cena) || 0) * brojDeceNum;
+      }
+
+      if (u.tip === "po_satu") {
+        total += (Number(u.cena) || 0) * trajanjeSati;
+      }
+    });
+
+    return total;
+  };
 
   const handleBook = async () => {
     setError("");
 
     if (!selectedSlot?._id) {
       setError("Izaberite termin.");
+      scrollToTop();
+      return;
+    }
+
+    if (!selectedCenaId) {
+      setError("Izaberite cenu.");
+      scrollToTop();
+      return;
+    }
+
+    if (!brojDece || Number(brojDece) < 1) {
+      setError("Unesite broj dece.");
       scrollToTop();
       return;
     }
@@ -224,6 +306,10 @@ const Book = () => {
     try {
       const bookingPayload = {
         slotId: selectedSlot._id,
+        cenaId: selectedCenaId,
+        paketId: selectedPaketId || null,
+        usluge: selectedUslugeIds,
+        brojDece: Number(brojDece) || 1,
         ime: korisnikPodaci.ime.trim(),
         prezime: korisnikPodaci.prezime.trim(),
         email: korisnikPodaci.email.trim().toLowerCase(),
@@ -400,12 +486,94 @@ const Book = () => {
               <p>
                 ⏰ Vreme: {selectedSlot.vremeOd} - {selectedSlot.vremeDo}
               </p>
-              <p>💰 Cena termina: {cenaTermina} RSD</p>
               <p>🎟️ Jedan termin = jedna rezervacija</p>
-              {cenaTermina === 0 && (
-                <small className="price-hint">Cena nije definisana</small>
-              )}
             </div>
+
+            <div className="form-group">
+              <label>Broj dece *</label>
+              <input
+                type="number"
+                min="1"
+                value={brojDece}
+                onChange={(e) => setBrojDece(e.target.value)}
+              />
+            </div>
+
+            {Array.isArray(playroom.cene) && playroom.cene.length > 0 && (
+              <div className="form-group">
+                <label>Izaberi cenu *</label>
+                <select
+                  value={selectedCenaId}
+                  onChange={(e) => setSelectedCenaId(e.target.value)}
+                >
+                  <option value="">-- Izaberi cenu --</option>
+                  {playroom.cene.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.naziv} - {c.cena} RSD
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {Array.isArray(playroom.paketi) && playroom.paketi.length > 0 && (
+              <div className="form-group">
+                <label>Izaberi paket (opciono)</label>
+                <div className="booking-options-list">
+                  <label>
+                    <input
+                      type="radio"
+                      name="paket"
+                      checked={selectedPaketId === ""}
+                      onChange={() => setSelectedPaketId("")}
+                    />
+                    Bez paketa
+                  </label>
+
+                  {playroom.paketi.map((p) => (
+                    <label key={p._id}>
+                      <input
+                        type="radio"
+                        name="paket"
+                        checked={selectedPaketId === String(p._id)}
+                        onChange={() => setSelectedPaketId(String(p._id))}
+                      />
+                      {p.naziv} - {p.cena} RSD
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(playroom.dodatneUsluge) &&
+              playroom.dodatneUsluge.length > 0 && (
+                <div className="form-group">
+                  <label>Dodatne usluge (opciono)</label>
+                  <div className="booking-options-list">
+                    {playroom.dodatneUsluge.map((u) => (
+                      <label key={u._id}>
+                        <input
+                          type="checkbox"
+                          checked={selectedUslugeIds.includes(String(u._id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUslugeIds((prev) => [
+                                ...prev,
+                                String(u._id),
+                              ]);
+                            } else {
+                              setSelectedUslugeIds((prev) =>
+                                prev.filter((id) => id !== String(u._id)),
+                              );
+                            }
+                          }}
+                        />
+                        {u.naziv} - {u.cena} RSD
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             {Array.isArray(playroom.besplatnePogodnosti) &&
               playroom.besplatnePogodnosti.length > 0 && (
@@ -521,14 +689,52 @@ const Book = () => {
             <div className="order-summary">
               <h4>🛒 Pregled rezervacije</h4>
 
-              <div className="summary-item">
-                <span>Cena termina</span>
-                <span>{cenaTermina} RSD</span>
-              </div>
+              {selectedCena && (
+                <div className="summary-item">
+                  <span>{selectedCena.naziv}</span>
+                  <span>
+                    {selectedCena.tip === "po_osobi"
+                      ? `${selectedCena.cena} × ${brojDece} = ${
+                          (Number(selectedCena.cena) || 0) *
+                          (Number(brojDece) || 0)
+                        } RSD`
+                      : selectedCena.tip === "po_satu"
+                        ? `${selectedCena.cena} × ${getSlotDurationInHours()}h = ${
+                            (Number(selectedCena.cena) || 0) *
+                            getSlotDurationInHours()
+                          } RSD`
+                        : `${selectedCena.cena} RSD`}
+                  </span>
+                </div>
+              )}
+
+              {selectedPaket && (
+                <div className="summary-item">
+                  <span>Paket: {selectedPaket.naziv}</span>
+                  <span>{selectedPaket.cena} RSD</span>
+                </div>
+              )}
+
+              {selectedUsluge.map((u) => (
+                <div className="summary-item" key={u._id}>
+                  <span>Usluga: {u.naziv}</span>
+                  <span>
+                    {u.tip === "po_osobi"
+                      ? `${u.cena} × ${brojDece} = ${
+                          (Number(u.cena) || 0) * (Number(brojDece) || 0)
+                        } RSD`
+                      : u.tip === "po_satu"
+                        ? `${u.cena} × ${getSlotDurationInHours()}h = ${
+                            (Number(u.cena) || 0) * getSlotDurationInHours()
+                          } RSD`
+                        : `${u.cena} RSD`}
+                  </span>
+                </div>
+              ))}
 
               <div className="summary-total">
                 <span>Ukupno za plaćanje:</span>
-                <strong>{cenaTermina} RSD</strong>
+                <strong>{calculateTotal()} RSD</strong>
               </div>
             </div>
 

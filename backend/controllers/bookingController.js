@@ -21,6 +21,10 @@ exports.createBooking = async (req, res, next) => {
       slotId: req.body.slotId,
       user: req.user || null,
       payload: {
+        cenaId: req.body.cenaId || "",
+        paketId: req.body.paketId || null,
+        usluge: Array.isArray(req.body.usluge) ? req.body.usluge : [],
+        brojDece: Number(req.body.brojDece) || 1,
         imeRoditelja: req.body.imeRoditelja || req.body.ime || "",
         prezimeRoditelja: req.body.prezimeRoditelja || req.body.prezime || "",
         emailRoditelja: req.body.emailRoditelja || req.body.email || "",
@@ -76,6 +80,10 @@ exports.createGuestBooking = async (req, res, next) => {
       slotId,
       user: createdUser,
       payload: {
+        cenaId: req.body.cenaId || "",
+        paketId: req.body.paketId || null,
+        usluge: Array.isArray(req.body.usluge) ? req.body.usluge : [],
+        brojDece: Number(req.body.brojDece) || 1,
         imeRoditelja: createdUser.ime,
         prezimeRoditelja: createdUser.prezime,
         emailRoditelja: createdUser.email,

@@ -3,6 +3,7 @@ const Booking = require("../models/Booking");
 const BOOKING_STATUS = require("../constants/bookingStatus");
 const ErrorResponse = require("../utils/errorResponse");
 const mongoose = require("mongoose");
+const Playroom = require("../models/Playroom");
 
 const buildDateTime = (date, time) => {
   const [hour, minute] = String(time || "00:00")
@@ -50,6 +51,13 @@ const reserveSlot = async ({
     ) {
       throw new ErrorResponse("Nedostaju podaci za rezervaciju", 400);
     }
+    if (!payload?.cenaId) {
+      throw new ErrorResponse("Cena je obavezna", 400);
+    }
+
+    if (!payload?.brojDece || Number(payload.brojDece) < 1) {
+      throw new ErrorResponse("Broj dece mora biti najmanje 1", 400);
+    }
 
     if (!mongoose.Types.ObjectId.isValid(slotId)) {
       throw new ErrorResponse("Nevalidan slot ID", 400);
@@ -89,7 +97,120 @@ const reserveSlot = async ({
       throw new ErrorResponse("Ne možeš rezervisati prošli termin", 400);
     }
 
-    const ukupnaCena = Number(slot.cena) || 0;
+    const playroom = await Playroom.findById(slot.playroomId).session(session);
+
+    if (!playroom) {
+      await TimeSlot.findByIdAndUpdate(
+        slot._id,
+        { $set: { zauzeto: false } },
+        { session },
+      );
+
+      throw new ErrorResponse("Igraonica nije pronađena", 404);
+    }
+
+    const brojDece = Number(payload.brojDece) || 1;
+    const trajanjeSati = (() => {
+      const start = buildDateTime(slot.datum, slot.vremeOd);
+      const end = buildDateTime(slot.datum, slot.vremeDo);
+      const diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return diff > 0 ? diff : 1;
+    })();
+
+    const cena = Array.isArray(playroom.cene)
+      ? playroom.cene.find((c) => String(c._id) === String(payload.cenaId))
+      : null;
+
+    if (!cena) {
+      await TimeSlot.findByIdAndUpdate(
+        slot._id,
+        { $set: { zauzeto: false } },
+        { session },
+      );
+
+      throw new ErrorResponse("Izabrana cena nije pronađena", 400);
+    }
+
+    let ukupnaCena = 0;
+
+    if (cena.tip === "fiksno") {
+      ukupnaCena += Number(cena.cena) || 0;
+    }
+
+    if (cena.tip === "po_osobi") {
+      ukupnaCena += (Number(cena.cena) || 0) * brojDece;
+    }
+
+    if (cena.tip === "po_satu") {
+      ukupnaCena += (Number(cena.cena) || 0) * trajanjeSati;
+    }
+
+    let selectedPaket = null;
+
+    if (payload.paketId) {
+      selectedPaket = Array.isArray(playroom.paketi)
+        ? playroom.paketi.find((p) => String(p._id) === String(payload.paketId))
+        : null;
+
+      if (!selectedPaket) {
+        await TimeSlot.findByIdAndUpdate(
+          slot._id,
+          { $set: { zauzeto: false } },
+          { session },
+        );
+
+        throw new ErrorResponse("Izabrani paket nije pronađen", 400);
+      }
+
+      ukupnaCena += Number(selectedPaket.cena) || 0;
+    }
+
+    const selectedUsluge = [];
+
+    const uniqueUslugeIds = Array.isArray(payload.usluge)
+      ? [...new Set(payload.usluge.map((id) => String(id)))]
+      : [];
+    if (uniqueUslugeIds.length > 0) {
+      for (const uslugaId of uniqueUslugeIds) {
+        const usluga = Array.isArray(playroom.dodatneUsluge)
+          ? playroom.dodatneUsluge.find(
+              (u) => String(u._id) === String(uslugaId),
+            )
+          : null;
+
+        if (!usluga) {
+          await TimeSlot.findByIdAndUpdate(
+            slot._id,
+            { $set: { zauzeto: false } },
+            { session },
+          );
+
+          throw new ErrorResponse(
+            "Jedna od izabranih usluga nije pronađena",
+            400,
+          );
+        }
+
+        selectedUsluge.push({
+          naziv: usluga.naziv,
+          cena: Number(usluga.cena) || 0,
+          tip: usluga.tip || "fiksno",
+          opis: usluga.opis || "",
+        });
+
+        if (usluga.tip === "fiksno") {
+          ukupnaCena += Number(usluga.cena) || 0;
+        }
+
+        if (usluga.tip === "po_osobi") {
+          ukupnaCena += (Number(usluga.cena) || 0) * brojDece;
+        }
+
+        if (usluga.tip === "po_satu") {
+          ukupnaCena += (Number(usluga.cena) || 0) * trajanjeSati;
+        }
+      }
+    }
 
     let created;
 
@@ -110,6 +231,21 @@ const reserveSlot = async ({
             prezimeRoditelja: payload.prezimeRoditelja.trim(),
             emailRoditelja: payload.emailRoditelja.trim().toLowerCase(),
             telefonRoditelja: payload.telefonRoditelja.trim(),
+            brojDece,
+            izabranaCena: {
+              naziv: cena.naziv,
+              cena: Number(cena.cena) || 0,
+              tip: cena.tip || "fiksno",
+              opis: cena.opis || "",
+            },
+            izabraniPaket: selectedPaket
+              ? {
+                  naziv: selectedPaket.naziv,
+                  cena: Number(selectedPaket.cena) || 0,
+                  opis: selectedPaket.opis || "",
+                }
+              : undefined,
+            izabraneUsluge: selectedUsluge,
           },
         ],
         { session },
