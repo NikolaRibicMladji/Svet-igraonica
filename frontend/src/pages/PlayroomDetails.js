@@ -117,9 +117,6 @@ const PlayroomDetails = () => {
 
   const ratingValue = Number(playroom.rating || 0);
   const filledStars = Math.max(0, Math.min(5, Math.floor(ratingValue)));
-  const osnovnaCena = Number(
-    playroom.osnovnaCena || playroom.cenovnik?.osnovni || 0,
-  );
 
   return (
     <div className="container playroom-details">
@@ -384,25 +381,7 @@ const PlayroomDetails = () => {
 
             <div className="price-modal-body">
               <div className="price-group">
-                <h3>🎟️ Ulaznice</h3>
-
-                <div className="price-item">
-                  <span>Cena po detetu:</span>
-                  <strong>{osnovnaCena} RSD</strong>
-                </div>
-
-                {playroom.cenaRoditelja &&
-                  playroom.cenaRoditelja.tip !== "ne_naplacuje" && (
-                    <div className="price-item">
-                      <span>Cena za roditelje:</span>
-                      <strong>
-                        {playroom.cenaRoditelja.iznos} RSD
-                        {playroom.cenaRoditelja.tip === "po_osobi"
-                          ? " po roditelju"
-                          : " fiksno"}
-                      </strong>
-                    </div>
-                  )}
+                <h3>💰 Cene</h3>
 
                 {Array.isArray(playroom.cene) &&
                   playroom.cene.map((cena, idx) => (
@@ -411,6 +390,9 @@ const PlayroomDetails = () => {
                       <strong>{cena.cena} RSD</strong>
                       {cena.tip === "po_osobi" && (
                         <span className="price-type">(po osobi)</span>
+                      )}
+                      {cena.tip === "po_satu" && (
+                        <span className="price-type">(po satu)</span>
                       )}
                       {cena.opis && (
                         <span className="price-desc">({cena.opis})</span>
@@ -421,7 +403,7 @@ const PlayroomDetails = () => {
 
               {Array.isArray(playroom.paketi) && playroom.paketi.length > 0 && (
                 <div className="price-group">
-                  <h3>🎁 Fiksni paketi</h3>
+                  <h3>🎁 Paketi</h3>
                   {playroom.paketi.map((paket, idx) => (
                     <div key={`${paket.naziv}-${idx}`} className="price-item">
                       <span>{paket.naziv}:</span>
@@ -447,6 +429,9 @@ const PlayroomDetails = () => {
                         <strong>{usluga.cena} RSD</strong>
                         {usluga.tip === "po_osobi" && (
                           <span className="price-type">(po osobi)</span>
+                        )}
+                        {usluga.tip === "po_satu" && (
+                          <span className="price-type">(po satu)</span>
                         )}
                         {usluga.opis && (
                           <span className="price-desc">({usluga.opis})</span>

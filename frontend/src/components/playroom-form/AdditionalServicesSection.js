@@ -45,6 +45,7 @@ const AdditionalServicesSection = ({
           >
             <option value="fiksno">Fiksna cena</option>
             <option value="po_osobi">Cena po osobi</option>
+            <option value="po_satu">Cena po satu</option>
           </select>
 
           <input
@@ -69,7 +70,11 @@ const AdditionalServicesSection = ({
                   <strong>{item.naziv}</strong> - {item.cena} RSD
                 </span>
                 <span className="item-type">
-                  {item.tip === "po_osobi" ? "(po osobi)" : "(fiksno)"}
+                  {item.tip === "po_osobi"
+                    ? "(po osobi)"
+                    : item.tip === "po_satu"
+                      ? "(po satu)"
+                      : "(fiksno)"}
                 </span>
                 {item.opis && <span className="item-opis">({item.opis})</span>}
                 <button type="button" onClick={() => handleRemoveUsluga(idx)}>

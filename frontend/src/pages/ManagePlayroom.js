@@ -194,23 +194,6 @@ const ManagePlayroom = () => {
               </p>
             </div>
 
-            <div className="detail-item">
-              <label>💰 Osnovna cena</label>
-              <p>{playroom.osnovnaCena || 0} RSD / dete</p>
-            </div>
-
-            <div className="detail-item">
-              <label>👨‍👩‍👧 Cena za roditelje</label>
-              <p>
-                {!playroom.cenaRoditelja ||
-                playroom.cenaRoditelja.tip === "ne_naplacuje"
-                  ? "Ne naplaćuje se"
-                  : playroom.cenaRoditelja.tip === "fiksno"
-                    ? `${playroom.cenaRoditelja.iznos} RSD fiksno`
-                    : `${playroom.cenaRoditelja.iznos} RSD po roditelju`}
-              </p>
-            </div>
-
             <div className="detail-item full-width">
               <label>🖼️ Profilna slika</label>
               <div className="profile-image">
@@ -284,7 +267,7 @@ const ManagePlayroom = () => {
 
             {Array.isArray(playroom.cene) && playroom.cene.length > 0 && (
               <div className="detail-item full-width">
-                <label>💰 Ostale cene</label>
+                <label>💰 Cene</label>
                 <div className="items-list">
                   {playroom.cene.map((item, idx) => (
                     <div key={`${item.naziv}-${idx}`} className="item-display">
