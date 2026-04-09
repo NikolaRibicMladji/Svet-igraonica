@@ -45,7 +45,7 @@ const VideosSection = ({
               videoGalerija.length >= 3
             }
           >
-            {uploadingVideo ? "Uploadujem..." : "+ Dodaj video"}
+            {uploadingVideo ? "Uploadujem..." : "+ Dodaj"}
           </button>
         </div>
 

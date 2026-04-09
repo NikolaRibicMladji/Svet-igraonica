@@ -57,7 +57,7 @@ const PackagesSection = ({
           />
 
           <button type="button" onClick={handleAddPaket}>
-            + Dodaj paket
+            + Dodaj
           </button>
         </div>
 
