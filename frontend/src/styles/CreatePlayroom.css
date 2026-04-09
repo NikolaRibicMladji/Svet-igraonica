@@ -113,6 +113,30 @@
   gap: 20px;
 }
 
+.section-recommendation {
+  margin: 6px 0 14px;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.item-type {
+  margin-left: 6px;
+  color: #777;
+  font-size: 14px;
+}
+
+.item-opis {
+  margin-left: 6px;
+  color: #555;
+  font-size: 14px;
+}
+.input-recommendation {
+  color: #888;
+  font-size: 13px;
+  margin-left: 6px;
+}
+
 /* ============================================
    DYNAMIC BLOCKS
 ============================================ */

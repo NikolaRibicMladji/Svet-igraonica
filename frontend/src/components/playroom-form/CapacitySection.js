@@ -7,7 +7,7 @@ const CapacitySection = ({ formData, handleChange, errors }) => {
 
       <div className="form-row">
         <div className="form-group">
-          <label>Kapacitet dece *</label>
+          <label>Kapacitet dece (Opciono)</label>
           <input
             type="number"
             min="1"
@@ -29,7 +29,6 @@ const CapacitySection = ({ formData, handleChange, errors }) => {
             name="kapacitet.roditelji"
             value={formData.kapacitet.roditelji}
             onChange={handleChange}
-            placeholder="0 = neograničeno"
           />
         </div>
       </div>

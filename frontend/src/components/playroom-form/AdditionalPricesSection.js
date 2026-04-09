@@ -9,13 +9,18 @@ const AdditionalPricesSection = ({
 }) => {
   return (
     <div className="form-section">
-      <h3>💰 Cene </h3>
+      <h3>
+        💰 Cene{" "}
+        <span className="input-recommendation">
+          (npr. dnevna karta, po satu, po osobi...)
+        </span>
+      </h3>
 
       <div className="dynamic-input">
         <div className="add-item">
           <input
             type="text"
-            placeholder="Naziv cene"
+            placeholder="Naziv (npr. dete, roditelj...)"
             value={novaCena.naziv}
             onChange={(e) =>
               setNovaCena((prev) => ({ ...prev, naziv: e.target.value }))
@@ -45,7 +50,7 @@ const AdditionalPricesSection = ({
 
           <input
             type="text"
-            placeholder="Opis"
+            placeholder="Opis cene"
             value={novaCena.opis}
             onChange={(e) =>
               setNovaCena((prev) => ({ ...prev, opis: e.target.value }))

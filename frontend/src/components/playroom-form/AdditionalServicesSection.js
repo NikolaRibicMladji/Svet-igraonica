@@ -9,7 +9,12 @@ const AdditionalServicesSection = ({
 }) => {
   return (
     <div className="form-section">
-      <h3>🎪 Dodatne usluge</h3>
+      <h3>
+        🎪 Dodatne usluge{" "}
+        <span className="input-recommendation">
+          (npr. animator, fotograf, maskota...)
+        </span>
+      </h3>
 
       <div className="dynamic-input">
         <div className="add-item">

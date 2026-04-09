@@ -91,7 +91,12 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
   const [paketi, setPaketi] = useState(
     Array.isArray(initialData?.paketi) ? initialData.paketi : [],
   );
-  const [noviPaket, setNoviPaket] = useState({ naziv: "", cena: "", opis: "" });
+  const [noviPaket, setNoviPaket] = useState({
+    naziv: "",
+    cena: "",
+    opis: "",
+    tip: "fiksno",
+  });
 
   const [dodatneUsluge, setDodatneUsluge] = useState(
     Array.isArray(initialData?.dodatneUsluge) ? initialData.dodatneUsluge : [],
@@ -152,7 +157,12 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
     setVideoNaziv("");
 
     setPaketi(Array.isArray(initialData?.paketi) ? initialData.paketi : []);
-    setNoviPaket({ naziv: "", cena: "", opis: "" });
+    setNoviPaket({
+      naziv: "",
+      cena: "",
+      opis: "",
+      tip: "fiksno",
+    });
 
     setDodatneUsluge(
       Array.isArray(initialData?.dodatneUsluge)
@@ -387,10 +397,16 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
         naziv,
         cena,
         opis: sanitizeText(noviPaket.opis),
+        tip: noviPaket.tip || "fiksno",
       },
     ]);
 
-    setNoviPaket({ naziv: "", cena: "", opis: "" });
+    setNoviPaket({
+      naziv: "",
+      cena: "",
+      opis: "",
+      tip: "fiksno",
+    });
   };
 
   const handleRemovePaket = (index) => {
@@ -554,12 +570,10 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
       newErrors.kontaktEmail = "Email nije validan.";
     }
 
-    if (!formData.kapacitet.deca) {
-      newErrors["kapacitet.deca"] = "Kapacitet dece je obavezan.";
-    } else {
+    if (formData.kapacitet.deca) {
       const kapacitetDece = Number(formData.kapacitet.deca);
-      if (!Number.isFinite(kapacitetDece) || kapacitetDece < 1) {
-        newErrors["kapacitet.deca"] = "Kapacitet dece mora biti najmanje 1.";
+      if (!Number.isFinite(kapacitetDece) || kapacitetDece < 0) {
+        newErrors["kapacitet.deca"] = "Kapacitet dece ne može biti negativan.";
       }
     }
 
@@ -599,6 +613,7 @@ export const usePlayroomForm = ({ initialData, onSubmit }) => {
         naziv: sanitizeText(p.naziv),
         cena: toNumberOrZero(p.cena),
         opis: sanitizeText(p.opis),
+        tip: p.tip || "fiksno",
       })),
       dodatneUsluge: dodatneUsluge.map((u) => ({
         naziv: sanitizeText(u.naziv),

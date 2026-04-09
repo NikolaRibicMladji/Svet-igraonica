@@ -59,6 +59,13 @@ const paketSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+
+  tip: {
+    type: String,
+    enum: ["fiksno", "po_osobi", "po_satu"],
+    default: "fiksno",
+  },
+
   opis: {
     type: String,
     default: "",
@@ -210,8 +217,8 @@ const PlayroomSchema = new mongoose.Schema(
     kapacitet: {
       deca: {
         type: Number,
-        required: [true, "Kapacitet dece je obavezan"],
-        min: 1,
+        default: 0,
+        min: 0,
       },
       roditelji: {
         type: Number,
