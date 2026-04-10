@@ -313,7 +313,7 @@ export const getAvailableTimeSlots = async (playroomId, datum = null) => {
 
     return {
       success: true,
-      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      data: response.data?.data || null,
     };
   } catch (error) {
     console.error("Greška pri dohvatanju slobodnih termina:", error);

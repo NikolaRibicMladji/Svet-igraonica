@@ -356,14 +356,20 @@ exports.getAvailableTimeSlots = async (req, res, next) => {
       });
     }
 
-    const targetDate = new Date(datum);
-    targetDate.setHours(0, 0, 0, 0);
+    const [year, month, day] = datum.split("-").map(Number);
+
+    const targetDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
     const workingHours = bookingService.getWorkingHoursForDate(
       playroom,
       targetDate,
     );
-
+    console.log("AVAILABLE DEBUG", {
+      datumIzQuery: datum,
+      targetDate: targetDate.toString(),
+      radnoVreme: playroom.radnoVreme,
+      workingHours,
+    });
     if (!workingHours) {
       return res.status(200).json({
         success: true,
@@ -448,8 +454,9 @@ exports.getAllTimeSlotsForOwner = async (req, res, next) => {
       });
     }
 
-    const targetDate = new Date(datum);
-    targetDate.setHours(0, 0, 0, 0);
+    const [year, month, day] = datum.split("-").map(Number);
+
+    const targetDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
     const workingHours = bookingService.getWorkingHoursForDate(
       playroom,

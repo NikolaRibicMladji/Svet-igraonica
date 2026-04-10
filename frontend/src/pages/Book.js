@@ -9,6 +9,14 @@ import { getPlayroomById } from "../services/playroomService";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Book.css";
 
+const getLocalDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const Book = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -32,10 +40,7 @@ const Book = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(getLocalDate);
 
   const [korisnikPodaci, setKorisnikPodaci] = useState({
     ime: "",
@@ -423,7 +428,7 @@ const Book = () => {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
+            min={getLocalDate()}
             className="date-input"
           />
         </div>

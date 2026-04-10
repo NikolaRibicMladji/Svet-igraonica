@@ -109,11 +109,9 @@ const PlayroomDetails = () => {
     );
   }
 
-  const profileImage = playroom.profilnaSlika?.url
-    ? [playroom.profilnaSlika]
-    : [];
   const galleryImages = Array.isArray(playroom.slike) ? playroom.slike : [];
-  const modalImages = [...profileImage, ...galleryImages];
+
+  const modalImages = galleryImages;
 
   const ratingValue = Number(playroom.rating || 0);
   const filledStars = Math.max(0, Math.min(5, Math.floor(ratingValue)));
@@ -131,11 +129,13 @@ const PlayroomDetails = () => {
       <div className="details-card">
         {playroom.profilnaSlika?.url && (
           <div className="profile-image-container">
-            <img
-              src={playroom.profilnaSlika.url}
-              alt={playroom.naziv}
-              className="profile-image-detail"
-            />
+            <div className="profile-image-wrapper">
+              <img
+                src={playroom.profilnaSlika.url}
+                alt={playroom.naziv}
+                className="profile-image-detail"
+              />
+            </div>
           </div>
         )}
 
@@ -170,81 +170,35 @@ const PlayroomDetails = () => {
           📍 {playroom.adresa}, {playroom.grad}
         </div>
 
-        <div className="details-info-three-columns">
-          <div className="info-column">
-            <div className="info-item">
-              <strong>📞 Telefon:</strong> {playroom.kontaktTelefon || "-"}
-            </div>
-            <div className="info-item">
-              <strong>📧 Email:</strong> {playroom.kontaktEmail || "-"}
-            </div>
+        <div className="details-grid">
+          <div className="detail-item">
+            <label>📞 Telefon</label>
+            <p>{playroom.kontaktTelefon || "-"}</p>
           </div>
 
-          <div className="info-column">
-            <div className="social-links">
-              <h4>🌐 Posetite nas</h4>
-              <div className="social-buttons">
-                {playroom.drustveneMreze?.instagram && (
-                  <a
-                    href={playroom.drustveneMreze.instagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="social-btn instagram"
-                  >
-                    📸 Instagram
-                  </a>
-                )}
-
-                {playroom.drustveneMreze?.facebook && (
-                  <a
-                    href={playroom.drustveneMreze.facebook}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="social-btn facebook"
-                  >
-                    📘 Facebook
-                  </a>
-                )}
-
-                {playroom.drustveneMreze?.tiktok && (
-                  <a
-                    href={playroom.drustveneMreze.tiktok}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="social-btn tiktok"
-                  >
-                    🎵 TikTok
-                  </a>
-                )}
-
-                {playroom.drustveneMreze?.website && (
-                  <a
-                    href={playroom.drustveneMreze.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="social-btn website"
-                  >
-                    🌐 Veb sajt
-                  </a>
-                )}
-              </div>
-            </div>
+          <div className="detail-item">
+            <label>📧 Email</label>
+            <p>{playroom.kontaktEmail || "-"}</p>
           </div>
 
-          <div className="info-column">
-            <div className="info-item">
-              <strong>👶 Kapacitet dece:</strong>{" "}
-              {playroom.kapacitet?.deca || 0}
-            </div>
-            <div className="info-item">
-              <strong>👨‍👩‍👧 Kapacitet roditelja:</strong>{" "}
+          <div className="detail-item">
+            <label>👶 Kapacitet dece</label>
+            <p>{playroom.kapacitet?.deca || 0} dece</p>
+          </div>
+
+          <div className="detail-item">
+            <label>👨‍👩‍👧 Kapacitet roditelja</label>
+            <p>
               {playroom.kapacitet?.roditelji
                 ? `${playroom.kapacitet.roditelji} roditelja`
                 : "Neograničeno"}
-            </div>
+            </p>
           </div>
         </div>
-
+        <div className="detail-item full-width">
+          <label>📝 Opis</label>
+          <p className="description-text">{playroom.opis || "-"}</p>
+        </div>
         <div className="details-price">
           <div className="price-buttons">
             <button
@@ -259,26 +213,6 @@ const PlayroomDetails = () => {
               📅 Rezerviši
             </button>
           </div>
-        </div>
-
-        <div className="details-features">
-          <h3>✨ Besplatne pogodnosti</h3>
-
-          {Array.isArray(playroom.besplatnePogodnosti) &&
-          playroom.besplatnePogodnosti.length > 0 ? (
-            <div className="features-list">
-              {playroom.besplatnePogodnosti.map((feature, index) => (
-                <span
-                  key={`${feature}-${index}`}
-                  className="feature-badge free-feature"
-                >
-                  ✓ {feature}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="no-features">Nema navedenih besplatnih pogodnosti.</p>
-          )}
         </div>
 
         <div className="details-working-hours">
@@ -304,10 +238,56 @@ const PlayroomDetails = () => {
           </div>
         </div>
 
-        <div className="detail-item full-width">
-          <label>📝 Opis</label>
-          <p className="description-text">{playroom.opis || "-"}</p>
-        </div>
+        {playroom.drustveneMreze && (
+          <div className="detail-item full-width">
+            <label>🌐 Društvene mreže</label>
+            <div className="social-links-manage">
+              {playroom.drustveneMreze.instagram && (
+                <a
+                  href={playroom.drustveneMreze.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="social-link-small instagram"
+                >
+                  📸 Instagram
+                </a>
+              )}
+
+              {playroom.drustveneMreze.facebook && (
+                <a
+                  href={playroom.drustveneMreze.facebook}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="social-link-small facebook"
+                >
+                  📘 Facebook
+                </a>
+              )}
+
+              {playroom.drustveneMreze.tiktok && (
+                <a
+                  href={playroom.drustveneMreze.tiktok}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="social-link-small tiktok"
+                >
+                  🎵 TikTok
+                </a>
+              )}
+
+              {playroom.drustveneMreze.website && (
+                <a
+                  href={playroom.drustveneMreze.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="social-link-small website"
+                >
+                  🌐 Veb sajt
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         {galleryImages.length > 0 && (
           <div className="details-gallery">
@@ -317,7 +297,7 @@ const PlayroomDetails = () => {
                 <div
                   key={img.publicId || img.public_id || img.url || idx}
                   className="gallery-item"
-                  onClick={() => openGalleryModal(profileImage.length + idx)}
+                  onClick={() => openGalleryModal(idx)}
                 >
                   <img src={img.url} alt={`Slika ${idx + 1}`} />
                 </div>
@@ -333,34 +313,35 @@ const PlayroomDetails = () => {
             onClose={() => setModalOpen(false)}
           />
         )}
-      </div>
 
-      {Array.isArray(playroom.videoGalerija) &&
-      playroom.videoGalerija.length > 0 ? (
-        <div className="details-video-gallery">
-          <h3>🎥 Video galerija</h3>
-          <div className="video-gallery-grid">
-            {playroom.videoGalerija.map((video, idx) => (
-              <VideoPlayer
-                key={video.publicId || video.public_id || video.url || idx}
-                video={video}
-              />
-            ))}
+        {Array.isArray(playroom.videoGalerija) &&
+        playroom.videoGalerija.length > 0 ? (
+          <div className="details-video-gallery">
+            <h3>🎥 Video galerija</h3>
+            <div className="video-gallery-grid">
+              {playroom.videoGalerija.map((video, idx) => (
+                <VideoPlayer
+                  key={video.publicId || video.public_id || video.url || idx}
+                  video={video}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      ) : (
-        <div
-          style={{
-            margin: "20px 0",
-            padding: "20px",
-            background: "#fff3e0",
-            borderRadius: "12px",
-            textAlign: "center",
-          }}
-        >
-          <p>📹 Još nema dodatih video snimaka za ovu igraonicu.</p>
-        </div>
-      )}
+        ) : (
+          <div
+            style={{
+              margin: "20px 0",
+              padding: "20px",
+              background: "#fff3e0",
+              borderRadius: "12px",
+              textAlign: "center",
+            }}
+          >
+            <p>📹 Još nema dodatih video snimaka za ovu igraonicu.</p>
+          </div>
+        )}
+        <Reviews playroomId={playroom._id} />
+      </div>
 
       {showPriceModal && (
         <div className="price-modal" onClick={() => setShowPriceModal(false)}>
@@ -408,6 +389,15 @@ const PlayroomDetails = () => {
                     <div key={`${paket.naziv}-${idx}`} className="price-item">
                       <span>{paket.naziv}:</span>
                       <strong>{paket.cena} RSD</strong>
+                      {paket.tip === "po_osobi" && (
+                        <span className="price-type">(po osobi)</span>
+                      )}
+                      {paket.tip === "po_satu" && (
+                        <span className="price-type">(po satu)</span>
+                      )}
+                      {paket.tip === "fiksno" && (
+                        <span className="price-type">(fiksno)</span>
+                      )}
                       {paket.opis && (
                         <span className="price-desc">({paket.opis})</span>
                       )}
@@ -458,8 +448,6 @@ const PlayroomDetails = () => {
           </div>
         </div>
       )}
-
-      <Reviews playroomId={playroom._id} />
     </div>
   );
 };

@@ -130,10 +130,7 @@ exports.getAllPlayrooms = async (req, res, next) => {
 // @access  Public
 exports.getPlayroomById = async (req, res, next) => {
   try {
-    const playroom = await Playroom.findById(req.params.id).populate(
-      "vlasnikId",
-      "ime prezime email telefon",
-    );
+    const playroom = await Playroom.findById(req.params.id);
 
     if (!playroom) {
       return res.status(404).json({
@@ -143,7 +140,7 @@ exports.getPlayroomById = async (req, res, next) => {
     }
 
     const isAdmin = req.user?.role === "admin";
-    const isOwner = playroom.vlasnikId?._id?.toString() === req.user?.id;
+    const isOwner = playroom.vlasnikId?.toString() === req.user?.id;
 
     if (!playroom.verifikovan && !isAdmin && !isOwner) {
       return res.status(403).json({
@@ -152,9 +149,20 @@ exports.getPlayroomById = async (req, res, next) => {
       });
     }
 
+    const data = playroom.toObject();
+
+    // ❌ ukloni privatno
+    delete data.vlasnikId;
+    delete data.__v;
+    delete data.createdAt;
+    delete data.updatedAt;
+
+    // ❌ ukloni email ako NE želiš javno
+    delete data.kontaktEmail;
+
     res.status(200).json({
       success: true,
-      data: playroom,
+      data,
     });
   } catch (error) {
     next(error);

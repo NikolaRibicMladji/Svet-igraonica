@@ -63,7 +63,12 @@ const getWorkingHoursForDate = (playroom, date) => {
   const dayKey = getDayKeyFromDate(date);
   const dayConfig = playroom?.radnoVreme?.[dayKey];
 
-  if (!dayConfig || dayConfig.radi === false) {
+  if (
+    !dayConfig ||
+    dayConfig.radi === false ||
+    !dayConfig.od ||
+    !dayConfig.do
+  ) {
     return null;
   }
 
