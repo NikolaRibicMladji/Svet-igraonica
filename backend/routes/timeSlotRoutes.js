@@ -16,6 +16,7 @@ const {
   getAvailableTimeSlots,
   getAllTimeSlotsForOwner,
   manualBookTimeSlot,
+  manualBookInterval,
 } = require("../controllers/timeSlotController");
 
 const validate = require("../middleware/validate");
@@ -26,6 +27,15 @@ const {
   playroomDateQuerySchema,
   timeSlotIdParamSchema,
 } = require("../validations/timeSlotValidation");
+
+const { manualBookingSchema } = require("../validations/bookingValidation");
+
+router.post(
+  "/manual-book-interval",
+  protect,
+  validate(manualBookingSchema),
+  manualBookInterval,
+);
 
 // 🌐 JAVNE RUTE
 router.get(
@@ -83,6 +93,13 @@ router.post(
   authorize(ROLES.VLASNIK, ROLES.ADMIN),
   validate(manualBookTimeSlotSchema),
   manualBookTimeSlot,
+);
+
+router.post(
+  "/manual-book-interval",
+  protect,
+  validate(manualBookingSchema),
+  manualBookInterval,
 );
 
 module.exports = router;

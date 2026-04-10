@@ -5,6 +5,7 @@ const BOOKING_STATUS = require("../constants/bookingStatus");
 const timeSlotService = require("../services/timeSlotService");
 const mongoose = require("mongoose");
 const TimeSlot = require("../models/TimeSlot");
+const bookingService = require("../services/bookingService");
 
 // @desc    Kreiraj novi termin (samo vlasnik igraonice)
 // @route   POST /api/timeslots
@@ -346,44 +347,68 @@ exports.getAvailableTimeSlots = async (req, res, next) => {
       });
     }
 
-    const startDate = new Date(datum);
-    startDate.setHours(0, 0, 0, 0);
+    const playroom = await Playroom.findById(playroomId);
 
-    const endDate = new Date(datum);
-    endDate.setHours(23, 59, 59, 999);
+    if (!playroom) {
+      return res.status(404).json({
+        success: false,
+        message: "Igraonica nije pronađena",
+      });
+    }
 
-    const timeSlots = await TimeSlot.find({
+    const targetDate = new Date(datum);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const workingHours = bookingService.getWorkingHoursForDate(
+      playroom,
+      targetDate,
+    );
+
+    if (!workingHours) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          workingHours: null,
+          busyIntervals: [],
+          freeIntervals: [],
+        },
+      });
+    }
+
+    const bookings = await bookingService.getActiveBookingsForDate({
       playroomId,
-      datum: { $gte: startDate, $lte: endDate },
-      aktivno: true,
-      vanRadnogVremena: false,
-    }).sort({ vremeOd: 1 });
+      datum: targetDate,
+    });
 
-    const now = new Date();
+    const segments = bookingService.buildDaySegments({
+      workingHours,
+      bookings: bookings.map((b) => ({
+        vremeOd: b.vremeOd,
+        vremeDo: b.vremeDo,
+      })),
+    });
 
-    const slotsWithStatus = timeSlots
-      .map((slot) => {
-        const slotEnd = new Date(
-          new Date(slot.datum).getFullYear(),
-          new Date(slot.datum).getMonth(),
-          new Date(slot.datum).getDate(),
-          ...slot.vremeDo.split(":").map((v) => parseInt(v, 10)),
-        );
+    const busyIntervals = segments
+      .filter((s) => s.tip === "zauzeto")
+      .map((s) => ({
+        vremeOd: s.vremeOd,
+        vremeDo: s.vremeDo,
+      }));
 
-        const isPast = slotEnd <= now;
-
-        return {
-          ...slot.toObject(),
-          isPast,
-          status: isPast ? "prošao" : slot.zauzeto ? "zauzeto" : "slobodno",
-        };
-      })
-      .filter((slot) => !slot.isPast);
+    const freeIntervals = segments
+      .filter((s) => s.tip === "slobodno")
+      .map((s) => ({
+        vremeOd: s.vremeOd,
+        vremeDo: s.vremeDo,
+      }));
 
     res.status(200).json({
       success: true,
-      count: slotsWithStatus.length,
-      data: slotsWithStatus,
+      data: {
+        workingHours,
+        busyIntervals,
+        freeIntervals,
+      },
     });
   } catch (error) {
     next(error);
@@ -423,57 +448,73 @@ exports.getAllTimeSlotsForOwner = async (req, res, next) => {
       });
     }
 
-    const startDate = new Date(datum);
-    startDate.setHours(0, 0, 0, 0);
+    const targetDate = new Date(datum);
+    targetDate.setHours(0, 0, 0, 0);
 
-    const endDate = new Date(datum);
-    endDate.setHours(23, 59, 59, 999);
+    const workingHours = bookingService.getWorkingHoursForDate(
+      playroom,
+      targetDate,
+    );
 
-    const timeSlots = await TimeSlot.find({
-      playroomId,
-      datum: { $gte: startDate, $lte: endDate },
-    }).sort({ vremeOd: 1 });
+    if (!workingHours) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+        playroom: {
+          id: playroom._id,
+          naziv: playroom.naziv,
+          grad: playroom.grad,
+        },
+      });
+    }
 
     const bookings = await Booking.find({
       playroomId,
-      datum: { $gte: startDate, $lte: endDate },
+      datum: {
+        $gte: new Date(new Date(datum).setHours(0, 0, 0, 0)),
+        $lte: new Date(new Date(datum).setHours(23, 59, 59, 999)),
+      },
       status: { $ne: BOOKING_STATUS.OTKAZANO },
     })
       .select(
-        "_id timeSlotId roditeljId imeRoditelja prezimeRoditelja emailRoditelja telefonRoditelja napomena status createdAt ukupnaCena",
+        "_id roditeljId imeRoditelja prezimeRoditelja emailRoditelja telefonRoditelja napomena status createdAt ukupnaCena vremeOd vremeDo",
       )
-      .populate("roditeljId", "ime prezime email telefon");
+      .populate("roditeljId", "ime prezime email telefon")
+      .sort({ vremeOd: 1 });
 
-    const bookingMap = new Map(
-      bookings.map((b) => [b.timeSlotId?.toString(), b]),
-    );
-
-    const slotsWithBookings = timeSlots.map((slot) => {
-      const foundBooking = bookingMap.get(slot._id.toString());
-
-      return {
-        ...slot.toObject(),
-        booking: foundBooking
-          ? {
-              id: foundBooking._id,
-              roditelj: foundBooking.roditeljId,
-              imeRoditelja: foundBooking.imeRoditelja,
-              prezimeRoditelja: foundBooking.prezimeRoditelja,
-              emailRoditelja: foundBooking.emailRoditelja,
-              telefonRoditelja: foundBooking.telefonRoditelja,
-              ukupnaCena: foundBooking.ukupnaCena,
-              napomena: foundBooking.napomena,
-              status: foundBooking.status,
-              createdAt: foundBooking.createdAt,
-            }
-          : null,
-      };
+    const segments = bookingService.buildDaySegments({
+      workingHours,
+      bookings: bookings.map((booking) => ({
+        _id: booking._id,
+        vremeOd: booking.vremeOd,
+        vremeDo: booking.vremeDo,
+        booking: {
+          id: booking._id,
+          roditelj: booking.roditeljId,
+          imeRoditelja: booking.imeRoditelja,
+          prezimeRoditelja: booking.prezimeRoditelja,
+          emailRoditelja: booking.emailRoditelja,
+          telefonRoditelja: booking.telefonRoditelja,
+          ukupnaCena: booking.ukupnaCena,
+          napomena: booking.napomena,
+          status: booking.status,
+          createdAt: booking.createdAt,
+        },
+      })),
     });
+
+    const normalizedSegments = segments.map((segment) => ({
+      tip: segment.tip,
+      vremeOd: segment.vremeOd,
+      vremeDo: segment.vremeDo,
+      booking: segment.booking?.booking || segment.booking || null,
+    }));
 
     res.status(200).json({
       success: true,
-      count: slotsWithBookings.length,
-      data: slotsWithBookings,
+      count: normalizedSegments.length,
+      data: normalizedSegments,
       playroom: {
         id: playroom._id,
         naziv: playroom.naziv,
@@ -640,5 +681,79 @@ exports.manualBookTimeSlot = async (req, res, next) => {
     next(error);
   } finally {
     session.endSession();
+  }
+};
+
+exports.manualBookInterval = async (req, res, next) => {
+  try {
+    const {
+      playroomId,
+      datum,
+      vremeOd,
+      vremeDo,
+      imeRoditelja,
+      prezimeRoditelja,
+      emailRoditelja,
+      telefonRoditelja,
+      napomena,
+    } = req.body;
+
+    const playroom = await Playroom.findById(playroomId);
+
+    if (!playroom) {
+      return res.status(404).json({
+        success: false,
+        message: "Igraonica nije pronađena",
+      });
+    }
+
+    if (
+      playroom.vlasnikId.toString() !== req.user.id &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Nemate pravo da ručno rezervišete za ovu igraonicu",
+      });
+    }
+
+    const defaultCena =
+      Array.isArray(playroom.cene) && playroom.cene.length > 0
+        ? playroom.cene[0]
+        : null;
+
+    if (!defaultCena?._id) {
+      return res.status(400).json({
+        success: false,
+        message: "Igraonica nema nijednu cenu za obračun rezervacije",
+      });
+    }
+
+    const booking = await bookingService.reserveCustomInterval({
+      playroomId,
+      datum,
+      vremeOd,
+      vremeDo,
+      user: null,
+      payload: {
+        cenaId: String(defaultCena._id),
+        paketId: null,
+        usluge: [],
+        brojDece: 1,
+        imeRoditelja: imeRoditelja || "",
+        prezimeRoditelja: prezimeRoditelja || "",
+        emailRoditelja: emailRoditelja || "",
+        telefonRoditelja: telefonRoditelja || "",
+        napomena: napomena || "",
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: booking,
+      message: "Termin je uspešno ručno zauzet.",
+    });
+  } catch (error) {
+    next(error);
   }
 };

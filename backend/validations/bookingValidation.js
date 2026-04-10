@@ -4,23 +4,25 @@ const objectId = z.string().regex(/^[a-f\d]{24}$/i, "ID nije validan");
 
 const createBookingSchema = z.object({
   body: z.object({
-    slotId: objectId,
-
+    playroomId: objectId,
+    datum: z.string().min(1, "Datum je obavezan"),
+    vremeOd: z.string().regex(/^\d{2}:\d{2}$/, "Vreme od nije validno"),
+    vremeDo: z.string().regex(/^\d{2}:\d{2}$/, "Vreme do nije validno"),
+    cenaId: objectId,
+    paketId: objectId.optional().nullable(),
+    usluge: z.array(objectId).optional(),
+    brojDece: z.coerce.number().min(1, "Broj dece mora biti najmanje 1"),
     imeRoditelja: z.string().min(2, "Ime mora imati bar 2 karaktera").trim(),
-
     prezimeRoditelja: z
       .string()
       .min(2, "Prezime mora imati bar 2 karaktera")
       .trim(),
-
     emailRoditelja: z.string().email("Neispravan email").toLowerCase().trim(),
-
     telefonRoditelja: z
       .string()
       .min(6, "Telefon mora imati bar 6 cifara")
       .regex(/^[0-9]+$/, "Telefon može sadržati samo brojeve")
       .trim(),
-
     napomena: z
       .string()
       .max(500, "Napomena može imati najviše 500 karaktera")
@@ -33,26 +35,27 @@ const createBookingSchema = z.object({
 const createGuestBookingSchema = z
   .object({
     body: z.object({
-      slotId: objectId,
+      playroomId: objectId,
 
+      datum: z.string().min(1, "Datum je obavezan"),
+      vremeOd: z.string().regex(/^\d{2}:\d{2}$/, "Vreme od nije validno"),
+      vremeDo: z.string().regex(/^\d{2}:\d{2}$/, "Vreme do nije validno"),
+      cenaId: objectId,
+      paketId: objectId.optional().nullable(),
+      usluge: z.array(objectId).optional(),
+      brojDece: z.coerce.number().min(1, "Broj dece mora biti najmanje 1"),
       ime: z.string().min(2, "Ime mora imati bar 2 karaktera").trim(),
-
       prezime: z.string().min(2, "Prezime mora imati bar 2 karaktera").trim(),
-
       email: z.string().email("Neispravan email").toLowerCase().trim(),
-
       telefon: z
         .string()
         .min(6, "Telefon mora imati bar 6 cifara")
         .regex(/^[0-9]+$/, "Telefon može sadržati samo brojeve")
         .trim(),
-
       password: z.string().min(6, "Lozinka mora imati bar 6 karaktera"),
-
       confirmPassword: z
         .string()
         .min(6, "Potvrda lozinke mora imati bar 6 karaktera"),
-
       napomena: z
         .string()
         .max(500, "Napomena može imati najviše 500 karaktera")
@@ -76,6 +79,10 @@ const bookingIdParamSchema = z.object({
 
 const manualBookingSchema = z.object({
   body: z.object({
+    playroomId: objectId,
+    datum: z.string().min(1),
+    vremeOd: z.string().regex(/^\d{2}:\d{2}$/),
+    vremeDo: z.string().regex(/^\d{2}:\d{2}$/),
     imeRoditelja: z.string().min(2),
     prezimeRoditelja: z.string().min(2),
     emailRoditelja: z.string().email(),
@@ -88,4 +95,5 @@ module.exports = {
   createBookingSchema,
   createGuestBookingSchema,
   bookingIdParamSchema,
+  manualBookingSchema,
 };

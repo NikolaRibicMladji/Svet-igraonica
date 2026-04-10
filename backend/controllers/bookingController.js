@@ -17,8 +17,11 @@ exports.createBooking = async (req, res, next) => {
       slotId: req.body.slotId,
       time: new Date().toISOString(),
     });
-    const booking = await bookingService.createBookingWithEmails({
-      slotId: req.body.slotId,
+    const booking = await bookingService.reserveCustomInterval({
+      playroomId: req.body.playroomId,
+      datum: req.body.datum,
+      vremeOd: req.body.vremeOd,
+      vremeDo: req.body.vremeDo,
       user: req.user || null,
       payload: {
         cenaId: req.body.cenaId || "",
@@ -31,6 +34,17 @@ exports.createBooking = async (req, res, next) => {
         telefonRoditelja: req.body.telefonRoditelja || req.body.telefon || "",
         napomena: req.body.napomena || "",
       },
+    });
+
+    setImmediate(async () => {
+      try {
+        await bookingService.handleBookingEmails(booking._id);
+      } catch (emailError) {
+        console.error(
+          "Greška pri slanju emaila nakon rezervacije:",
+          emailError.message,
+        );
+      }
     });
 
     return res.status(201).json({
@@ -52,12 +66,21 @@ exports.createGuestBooking = async (req, res, next) => {
   try {
     session.startTransaction();
 
-    const { slotId, ime, prezime, email, telefon, password, napomena } =
-      req.body;
+    const {
+      playroomId,
+      datum,
+      vremeOd,
+      vremeDo,
+      ime,
+      prezime,
+      email,
+      telefon,
+      password,
+      napomena,
+    } = req.body;
     console.log("🟡 GUEST BOOKING:", {
       requestId: req.requestId,
       email,
-      slotId,
       time: new Date().toISOString(),
     });
 
@@ -76,8 +99,11 @@ exports.createGuestBooking = async (req, res, next) => {
     const accessToken = authResult.accessToken;
     const refreshToken = authResult.refreshToken;
 
-    const createdBooking = await bookingService.reserveSlot({
-      slotId,
+    const createdBooking = await bookingService.reserveCustomInterval({
+      playroomId: req.body.playroomId,
+      datum: req.body.datum,
+      vremeOd: req.body.vremeOd,
+      vremeDo: req.body.vremeDo,
       user: createdUser,
       payload: {
         cenaId: req.body.cenaId || "",

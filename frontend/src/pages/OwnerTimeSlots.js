@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getMyPlayrooms } from "../services/playroomService";
 import {
   getAllTimeSlotsForOwner,
-  manualBookTimeSlot,
+  manualBookInterval,
 } from "../services/bookingService";
 import { useAuth } from "../context/AuthContext";
 import ManualBookingModal from "../components/ManualBookingModal";
@@ -117,7 +117,7 @@ const OwnerTimeSlots = () => {
 
   const handleManualBooking = async (bookingData) => {
     if (loadingSlots) return;
-    if (!selectedSlot?._id) {
+    if (!selectedSlot) {
       setError("Termin nije izabran.");
       return;
     }
@@ -126,7 +126,17 @@ const OwnerTimeSlots = () => {
     setMessage("");
 
     try {
-      const result = await manualBookTimeSlot(selectedSlot._id, bookingData);
+      const result = await manualBookInterval({
+        playroomId: selectedPlayroom,
+        datum: selectedDate,
+        vremeOd: bookingData.vremeOd,
+        vremeDo: bookingData.vremeDo,
+        imeRoditelja: bookingData.imeRoditelja,
+        prezimeRoditelja: bookingData.prezimeRoditelja,
+        emailRoditelja: bookingData.emailRoditelja,
+        telefonRoditelja: bookingData.telefonRoditelja,
+        napomena: bookingData.napomena || "",
+      });
 
       if (result?.success) {
         const successMessage = result.message || "Termin je uspešno zauzet.";
@@ -278,46 +288,48 @@ const OwnerTimeSlots = () => {
             </div>
           ) : (
             <div className="slots-grid">
-              {timeSlots.map((slot) => (
+              {timeSlots.map((segment, index) => (
                 <div
-                  key={slot._id}
-                  className={`slot-card ${slot.zauzeto ? "zauzeto" : "slobodno"}`}
+                  key={`${segment.vremeOd}-${segment.vremeDo}-${index}`}
+                  className={`slot-card ${segment.tip === "zauzeto" ? "zauzeto" : "slobodno"}`}
                 >
                   <div className="slot-header">
                     <h3>
-                      {slot.vremeOd} - {slot.vremeDo}
+                      {segment.vremeOd} - {segment.vremeDo}
                     </h3>
                     <span
                       className={`slot-status ${
-                        slot.zauzeto ? "zauzeto" : "slobodno"
+                        segment.tip === "zauzeto" ? "zauzeto" : "slobodno"
                       }`}
                     >
-                      {slot.zauzeto ? "ZAUZETO" : "SLOBODNO"}
+                      {segment.tip === "zauzeto" ? "ZAUZETO" : "SLOBODNO"}
                     </span>
                   </div>
 
                   <div className="slot-body">
-                    <p>💰 Cena: {slot.cena || 0} RSD</p>
+                    {segment.booking && (
+                      <p>💰 Cena: {segment.booking.ukupnaCena || 0} RSD</p>
+                    )}
 
-                    {slot.booking ? (
+                    {segment.booking ? (
                       <div className="booking-info">
                         <h4>Rezervacija</h4>
-                        <p>👤 {formatBookingName(slot.booking)}</p>
-                        <p>📧 {formatBookingEmail(slot.booking)}</p>
-                        <p>📞 {formatBookingPhone(slot.booking)}</p>
+                        <p>👤 {formatBookingName(segment.booking)}</p>
+                        <p>📧 {formatBookingEmail(segment.booking)}</p>
+                        <p>📞 {formatBookingPhone(segment.booking)}</p>
                         <p>
-                          💰 Ukupna cena: {slot.booking.ukupnaCena || 0} RSD
+                          💰 Ukupna cena: {segment.booking.ukupnaCena || 0} RSD
                         </p>
-                        {slot.booking.napomena && (
-                          <p>📝 Napomena: {slot.booking.napomena}</p>
+                        {segment.booking.napomena && (
+                          <p>📝 Napomena: {segment.booking.napomena}</p>
                         )}
                       </div>
                     ) : (
                       <button
                         type="button"
                         className="btn-primary"
-                        onClick={() => openManualBooking(slot)}
-                        disabled={slot.zauzeto}
+                        onClick={() => openManualBooking(segment)}
+                        disabled={segment.tip === "zauzeto"}
                       >
                         Ručno zauzmi termin
                       </button>

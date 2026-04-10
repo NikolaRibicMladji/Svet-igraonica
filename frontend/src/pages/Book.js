@@ -21,8 +21,9 @@ const Book = () => {
   const topRef = useRef(null);
 
   const [playroom, setPlayroom] = useState(null);
-  const [timeSlots, setTimeSlots] = useState([]);
-  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [availability, setAvailability] = useState(null);
+  const [selectedStartTime, setSelectedStartTime] = useState("");
+  const [selectedEndTime, setSelectedEndTime] = useState("");
 
   const [napomena, setNapomena] = useState("");
 
@@ -71,29 +72,20 @@ const Book = () => {
   const loadTimeSlots = useCallback(async () => {
     setLoadingSlots(true);
     setError("");
-    setSelectedSlot(null);
+    setSelectedStartTime("");
+    setSelectedEndTime("");
 
     try {
       const result = await getAvailableTimeSlots(id, selectedDate);
 
       if (result?.success) {
-        const availableSlots = Array.isArray(result.data)
-          ? result.data.filter((slot) => {
-              if (!slot?._id) return false;
-              if (slot?.zauzeto) return false;
-              if (slot?.isPast) return false;
-              if (slot?.status && slot.status !== "slobodno") return false;
-              return true;
-            })
-          : [];
-
-        setTimeSlots(availableSlots);
+        setAvailability(result.data || null);
       } else {
-        setTimeSlots([]);
+        setAvailability(null);
         setError(result?.error || "Greška pri učitavanju termina.");
       }
     } catch (err) {
-      setTimeSlots([]);
+      setAvailability(null);
       setError(
         err?.response?.data?.message ||
           err?.message ||
@@ -128,17 +120,6 @@ const Book = () => {
     }
   }, [playroom?._id, loadTimeSlots]);
 
-  const scrollToBookingForm = () => {
-    setTimeout(() => {
-      if (bookingFormRef.current) {
-        bookingFormRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }, 150);
-  };
-
   const scrollToTop = () => {
     setTimeout(() => {
       if (topRef.current) {
@@ -164,13 +145,10 @@ const Book = () => {
     : [];
 
   const getSlotDurationInHours = () => {
-    if (!selectedSlot?.vremeOd || !selectedSlot?.vremeDo) return 1;
+    if (!selectedStartTime || !selectedEndTime) return 1;
 
-    const [startH, startM] = selectedSlot.vremeOd.split(":").map(Number);
-    const [endH, endM] = selectedSlot.vremeDo.split(":").map(Number);
-
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+    const startMinutes = timeToMinutes(selectedStartTime);
+    const endMinutes = timeToMinutes(selectedEndTime);
     const diff = endMinutes - startMinutes;
 
     if (!Number.isFinite(diff) || diff <= 0) return 1;
@@ -218,11 +196,63 @@ const Book = () => {
     return total;
   };
 
+  const timeToMinutes = (time) => {
+    const [h, m] = String(time || "00:00")
+      .split(":")
+      .map(Number);
+    return h * 60 + m;
+  };
+
+  const doesOverlapBusyInterval = (start, end) => {
+    const busyIntervals = Array.isArray(availability?.busyIntervals)
+      ? availability.busyIntervals
+      : [];
+
+    const startMinutes = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+
+    return busyIntervals.some((interval) => {
+      const busyStart = timeToMinutes(interval.vremeOd);
+      const busyEnd = timeToMinutes(interval.vremeDo);
+
+      return startMinutes < busyEnd && endMinutes > busyStart;
+    });
+  };
+
   const handleBook = async () => {
     setError("");
 
-    if (!selectedSlot?._id) {
-      setError("Izaberite termin.");
+    if (!selectedStartTime || !selectedEndTime) {
+      setError("Izaberite vreme početka i završetka.");
+      scrollToTop();
+      return;
+    }
+
+    if (timeToMinutes(selectedEndTime) <= timeToMinutes(selectedStartTime)) {
+      setError("Vreme završetka mora biti posle vremena početka.");
+      scrollToTop();
+      return;
+    }
+
+    if (!availability?.workingHours) {
+      setError("Igraonica ne radi tog dana.");
+      scrollToTop();
+      return;
+    }
+
+    if (
+      timeToMinutes(selectedStartTime) <
+        timeToMinutes(availability.workingHours.vremeOd) ||
+      timeToMinutes(selectedEndTime) >
+        timeToMinutes(availability.workingHours.vremeDo)
+    ) {
+      setError("Izabrani termin mora biti unutar radnog vremena.");
+      scrollToTop();
+      return;
+    }
+
+    if (doesOverlapBusyInterval(selectedStartTime, selectedEndTime)) {
+      setError("Izabrani termin se preklapa sa zauzetim terminom.");
       scrollToTop();
       return;
     }
@@ -235,18 +265,6 @@ const Book = () => {
 
     if (!brojDece || Number(brojDece) < 1) {
       setError("Unesite broj dece.");
-      scrollToTop();
-      return;
-    }
-
-    if (
-      selectedSlot?.zauzeto ||
-      selectedSlot?.isPast ||
-      (selectedSlot?.status && selectedSlot.status !== "slobodno")
-    ) {
-      setError("Termin više nije dostupan. Izaberite drugi termin.");
-      setSelectedSlot(null);
-      await loadTimeSlots();
       scrollToTop();
       return;
     }
@@ -305,7 +323,10 @@ const Book = () => {
 
     try {
       const bookingPayload = {
-        slotId: selectedSlot._id,
+        playroomId: id,
+        datum: selectedDate,
+        vremeOd: selectedStartTime,
+        vremeDo: selectedEndTime,
         cenaId: selectedCenaId,
         paketId: selectedPaketId || null,
         usluge: selectedUslugeIds,
@@ -362,14 +383,6 @@ const Book = () => {
     });
   };
 
-  const getSlotStatus = (slot) => {
-    if (slot?.zauzeto) {
-      return { text: "ZAUZETO", class: "slot-full", disabled: true };
-    }
-
-    return { text: "SLOBODNO", class: "slot-free", disabled: false };
-  };
-
   if (loading) {
     return <div className="container loading">Učitavanje...</div>;
   }
@@ -381,16 +394,6 @@ const Book = () => {
       </div>
     );
   }
-
-  const trulyAvailableSlots = Array.isArray(timeSlots)
-    ? timeSlots.filter((slot) => {
-        if (!slot?._id) return false;
-        if (slot?.zauzeto) return false;
-        if (slot?.isPast) return false;
-        if (slot?.status && slot.status !== "slobodno") return false;
-        return true;
-      })
-    : [];
 
   return (
     <div className="container book-page" ref={topRef}>
@@ -426,65 +429,73 @@ const Book = () => {
         </div>
 
         <div className="slots-section">
-          <h3>Dostupni termini za {formatDate(selectedDate)}</h3>
+          <h3>Dostupnost za {formatDate(selectedDate)}</h3>
 
           {loadingSlots ? (
             <div className="loading-slots">Učitavanje termina...</div>
-          ) : trulyAvailableSlots.length === 0 ? (
+          ) : !availability?.workingHours ? (
             <div className="no-slots">
-              <p>😢 Nema dostupnih termina za izabrani datum.</p>
-              <p>Molimo izaberite drugi datum.</p>
+              <p>😢 Igraonica ne radi za izabrani datum.</p>
             </div>
           ) : (
-            <div className="slots-grid">
-              {trulyAvailableSlots.map((slot) => {
-                const status = getSlotStatus(slot);
-                const isSelected = selectedSlot?._id === slot._id;
+            <>
+              <div className="selected-slot-summary">
+                <p>
+                  🕘 Radno vreme: {availability.workingHours.vremeOd} -{" "}
+                  {availability.workingHours.vremeDo}
+                </p>
+              </div>
 
-                return (
-                  <div
-                    key={slot._id}
-                    className={`slot-card ${status.class} ${
-                      isSelected ? "selected" : ""
-                    }`}
-                    onClick={() => {
-                      if (
-                        !status.disabled &&
-                        !slot?.zauzeto &&
-                        !slot?.isPast &&
-                        (!slot?.status || slot.status === "slobodno")
-                      ) {
-                        setSelectedSlot(slot);
-                        setError("");
-                        scrollToBookingForm();
-                      }
-                    }}
-                  >
-                    <div className="slot-time">
-                      <span className="time-icon">⏰</span>
-                      <span className="time-range">
-                        {slot.vremeOd} - {slot.vremeDo}
-                      </span>
+              {Array.isArray(availability?.busyIntervals) &&
+              availability.busyIntervals.length > 0 ? (
+                <div className="busy-intervals">
+                  <h4>Zauzeti termini</h4>
+                  {availability.busyIntervals.map((interval, index) => (
+                    <div
+                      key={`${interval.vremeOd}-${interval.vremeDo}-${index}`}
+                      className="busy-interval-item"
+                    >
+                      🔒 {interval.vremeOd} - {interval.vremeDo}
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-slots">
+                  <p>✅ Trenutno nema zauzetih termina za taj datum.</p>
+                </div>
+              )}
 
-                    <div className={`slot-status-badge ${status.class}`}>
-                      {status.text}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Vreme od *</label>
+                  <input
+                    type="time"
+                    value={selectedStartTime}
+                    onChange={(e) => setSelectedStartTime(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Vreme do *</label>
+                  <input
+                    type="time"
+                    value={selectedEndTime}
+                    onChange={(e) => setSelectedEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+            </>
           )}
         </div>
 
-        {selectedSlot && !loadingSlots && trulyAvailableSlots.length > 0 && (
+        {availability?.workingHours && !loadingSlots && (
           <div className="booking-form" ref={bookingFormRef}>
             <h3>Detalji rezervacije</h3>
 
             <div className="selected-slot-summary">
               <p>📅 Datum: {formatDate(selectedDate)}</p>
               <p>
-                ⏰ Vreme: {selectedSlot.vremeOd} - {selectedSlot.vremeDo}
+                ⏰ Vreme: {selectedStartTime || "-"} - {selectedEndTime || "-"}
               </p>
               <p>🎟️ Jedan termin = jedna rezervacija</p>
             </div>

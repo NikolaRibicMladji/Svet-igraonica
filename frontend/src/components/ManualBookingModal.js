@@ -18,6 +18,8 @@ const ManualBookingModal = ({ onClose, slot, onSubmit }) => {
   const [telefon, setTelefon] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [vremeOd, setVremeOd] = useState("");
+  const [vremeDo, setVremeDo] = useState("");
 
   const cenaPoDetetu = useMemo(() => {
     const cena = Number(slot?.cena);
@@ -66,8 +68,41 @@ const ManualBookingModal = ({ onClose, slot, onSubmit }) => {
         setLoading(false);
         return;
       }
+      if (!vremeOd || !vremeDo) {
+        setError("Vreme od i vreme do su obavezni.");
+        setLoading(false);
+        return;
+      }
+
+      const toMinutes = (time) => {
+        const [h, m] = String(time || "00:00")
+          .split(":")
+          .map(Number);
+        return h * 60 + m;
+      };
+
+      if (toMinutes(vremeDo) <= toMinutes(vremeOd)) {
+        setError("Vreme završetka mora biti posle vremena početka.");
+        setLoading(false);
+        return;
+      }
+
+      if (slot?.tip === "slobodno") {
+        if (
+          toMinutes(vremeOd) < toMinutes(slot.vremeOd) ||
+          toMinutes(vremeDo) > toMinutes(slot.vremeDo)
+        ) {
+          setError("Ručna rezervacija mora biti unutar slobodnog intervala.");
+          setLoading(false);
+          return;
+        }
+      }
 
       await onSubmit?.({
+        playroomId: slot.playroomId || slot.playroom?._id || slot.playroomId,
+        datum: slot.datum,
+        vremeOd,
+        vremeDo,
         imeRoditelja: ime.trim(),
         prezimeRoditelja: prezime.trim(),
         emailRoditelja: email.trim(),
@@ -163,6 +198,25 @@ const ManualBookingModal = ({ onClose, slot, onSubmit }) => {
               type="text"
               value={telefon}
               onChange={(e) => setTelefon(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="form-group">
+            <label>⏰ Vreme od</label>
+            <input
+              type="time"
+              value={vremeOd}
+              onChange={(e) => setVremeOd(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>⏰ Vreme do</label>
+            <input
+              type="time"
+              value={vremeDo}
+              onChange={(e) => setVremeDo(e.target.value)}
               disabled={loading}
             />
           </div>

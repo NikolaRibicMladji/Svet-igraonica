@@ -20,7 +20,7 @@ const BookingSchema = new mongoose.Schema(
     timeSlotId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TimeSlot",
-      required: true,
+      default: null,
       index: true,
     },
 
@@ -166,17 +166,6 @@ const BookingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
-);
-
-// Sprečava duple rezervacije za isti slot osim otkazanih
-BookingSchema.index(
-  { timeSlotId: 1, status: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      status: { $ne: BOOKING_STATUS.OTKAZANO },
-    },
   },
 );
 

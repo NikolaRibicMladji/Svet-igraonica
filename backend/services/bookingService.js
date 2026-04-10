@@ -23,6 +23,126 @@ const buildDateTime = (date, time) => {
   );
 };
 
+const timeToMinutes = (time) => {
+  const [hour, minute] = String(time || "00:00")
+    .split(":")
+    .map((v) => parseInt(v, 10));
+
+  return (hour || 0) * 60 + (minute || 0);
+};
+
+const minutesToTime = (minutes) => {
+  const safeMinutes = Math.max(0, Number(minutes) || 0);
+  const hour = Math.floor(safeMinutes / 60);
+  const minute = safeMinutes % 60;
+
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+const isOverlapping = (startA, endA, startB, endB) => {
+  return startA < endB && endA > startB;
+};
+
+const getDayKeyFromDate = (date) => {
+  const day = new Date(date).getDay();
+
+  const map = {
+    0: "nedelja",
+    1: "ponedeljak",
+    2: "utorak",
+    3: "sreda",
+    4: "cetvrtak",
+    5: "petak",
+    6: "subota",
+  };
+
+  return map[day];
+};
+
+const getWorkingHoursForDate = (playroom, date) => {
+  const dayKey = getDayKeyFromDate(date);
+  const dayConfig = playroom?.radnoVreme?.[dayKey];
+
+  if (!dayConfig || dayConfig.radi === false) {
+    return null;
+  }
+
+  return {
+    vremeOd: dayConfig.od,
+    vremeDo: dayConfig.do,
+  };
+};
+
+const getActiveBookingsForDate = async ({
+  playroomId,
+  datum,
+  session = null,
+}) => {
+  const startDate = new Date(datum);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(datum);
+  endDate.setHours(23, 59, 59, 999);
+
+  let query = Booking.find({
+    playroomId,
+    datum: { $gte: startDate, $lte: endDate },
+    status: { $ne: BOOKING_STATUS.OTKAZANO },
+  }).sort({ vremeOd: 1 });
+
+  if (session) {
+    query = query.session(session);
+  }
+
+  return query;
+};
+
+const buildDaySegments = ({ workingHours, bookings }) => {
+  if (!workingHours) return [];
+
+  const dayStart = timeToMinutes(workingHours.vremeOd);
+  const dayEnd = timeToMinutes(workingHours.vremeDo);
+
+  const sortedBookings = [...(bookings || [])].sort(
+    (a, b) => timeToMinutes(a.vremeOd) - timeToMinutes(b.vremeOd),
+  );
+
+  const segments = [];
+  let cursor = dayStart;
+
+  for (const booking of sortedBookings) {
+    const bookingStart = timeToMinutes(booking.vremeOd);
+    const bookingEnd = timeToMinutes(booking.vremeDo);
+
+    if (bookingStart > cursor) {
+      segments.push({
+        tip: "slobodno",
+        vremeOd: minutesToTime(cursor),
+        vremeDo: minutesToTime(bookingStart),
+      });
+    }
+
+    segments.push({
+      tip: "zauzeto",
+      vremeOd: booking.vremeOd,
+      vremeDo: booking.vremeDo,
+      booking,
+    });
+
+    cursor = Math.max(cursor, bookingEnd);
+  }
+
+  if (cursor < dayEnd) {
+    segments.push({
+      tip: "slobodno",
+      vremeOd: minutesToTime(cursor),
+      vremeDo: minutesToTime(dayEnd),
+    });
+  }
+
+  return segments;
+};
+
 const reserveSlot = async ({
   slotId,
   user,
@@ -276,6 +396,238 @@ const reserveSlot = async ({
       user: user?._id || null,
       time: new Date().toISOString(),
     });
+
+    return booking;
+  } catch (err) {
+    if (ownSession) {
+      await session.abortTransaction();
+    }
+    throw err;
+  } finally {
+    if (ownSession) {
+      session.endSession();
+    }
+  }
+};
+
+const reserveCustomInterval = async ({
+  playroomId,
+  datum,
+  vremeOd,
+  vremeDo,
+  user,
+  payload,
+  session: externalSession = null,
+}) => {
+  const ownSession = !externalSession;
+  const session = externalSession || (await mongoose.startSession());
+  let booking = null;
+
+  try {
+    if (ownSession) {
+      session.startTransaction();
+    }
+
+    if (
+      !payload?.imeRoditelja ||
+      !payload?.prezimeRoditelja ||
+      !payload?.emailRoditelja ||
+      !payload?.telefonRoditelja
+    ) {
+      throw new ErrorResponse("Nedostaju podaci za rezervaciju", 400);
+    }
+
+    if (!payload?.cenaId) {
+      throw new ErrorResponse("Cena je obavezna", 400);
+    }
+
+    if (!payload?.brojDece || Number(payload.brojDece) < 1) {
+      throw new ErrorResponse("Broj dece mora biti najmanje 1", 400);
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(playroomId)) {
+      throw new ErrorResponse("Nevalidan ID igraonice", 400);
+    }
+
+    const bookingDate = new Date(datum);
+    bookingDate.setHours(0, 0, 0, 0);
+
+    const playroom = await Playroom.findById(playroomId).session(session);
+
+    if (!playroom) {
+      throw new ErrorResponse("Igraonica nije pronađena", 404);
+    }
+
+    const workingHours = getWorkingHoursForDate(playroom, bookingDate);
+
+    if (!workingHours) {
+      throw new ErrorResponse("Igraonica ne radi tog dana", 400);
+    }
+
+    const startMinutes = timeToMinutes(vremeOd);
+    const endMinutes = timeToMinutes(vremeDo);
+    const workingStart = timeToMinutes(workingHours.vremeOd);
+    const workingEnd = timeToMinutes(workingHours.vremeDo);
+
+    if (endMinutes <= startMinutes) {
+      throw new ErrorResponse(
+        "Vreme završetka mora biti posle vremena početka",
+        400,
+      );
+    }
+
+    if (startMinutes < workingStart || endMinutes > workingEnd) {
+      throw new ErrorResponse(
+        "Rezervacija mora biti unutar radnog vremena igraonice",
+        400,
+      );
+    }
+
+    const bookingEndDate = buildDateTime(bookingDate, vremeDo);
+
+    if (bookingEndDate <= new Date()) {
+      throw new ErrorResponse("Ne možeš rezervisati prošli termin", 400);
+    }
+
+    const existingBookings = await getActiveBookingsForDate({
+      playroomId,
+      datum: bookingDate,
+      session,
+    });
+
+    const hasOverlap = existingBookings.some((existing) =>
+      isOverlapping(
+        startMinutes,
+        endMinutes,
+        timeToMinutes(existing.vremeOd),
+        timeToMinutes(existing.vremeDo),
+      ),
+    );
+
+    if (hasOverlap) {
+      throw new ErrorResponse(
+        "Izabrani termin se preklapa sa postojećom rezervacijom",
+        400,
+      );
+    }
+
+    const brojDece = Number(payload.brojDece) || 1;
+    const trajanjeSati = (endMinutes - startMinutes) / 60;
+
+    const cena = Array.isArray(playroom.cene)
+      ? playroom.cene.find((c) => String(c._id) === String(payload.cenaId))
+      : null;
+
+    if (!cena) {
+      throw new ErrorResponse("Izabrana cena nije pronađena", 400);
+    }
+
+    let ukupnaCena = 0;
+
+    if (cena.tip === "fiksno") {
+      ukupnaCena += Number(cena.cena) || 0;
+    }
+
+    if (cena.tip === "po_osobi") {
+      ukupnaCena += (Number(cena.cena) || 0) * brojDece;
+    }
+
+    if (cena.tip === "po_satu") {
+      ukupnaCena += (Number(cena.cena) || 0) * trajanjeSati;
+    }
+
+    let selectedPaket = null;
+
+    if (payload.paketId) {
+      selectedPaket = Array.isArray(playroom.paketi)
+        ? playroom.paketi.find((p) => String(p._id) === String(payload.paketId))
+        : null;
+
+      if (!selectedPaket) {
+        throw new ErrorResponse("Izabrani paket nije pronađen", 400);
+      }
+
+      ukupnaCena += Number(selectedPaket.cena) || 0;
+    }
+
+    const selectedUsluge = [];
+    const uniqueUslugeIds = Array.isArray(payload.usluge)
+      ? [...new Set(payload.usluge.map((id) => String(id)))]
+      : [];
+
+    for (const uslugaId of uniqueUslugeIds) {
+      const usluga = Array.isArray(playroom.dodatneUsluge)
+        ? playroom.dodatneUsluge.find((u) => String(u._id) === String(uslugaId))
+        : null;
+
+      if (!usluga) {
+        throw new ErrorResponse(
+          "Jedna od izabranih usluga nije pronađena",
+          400,
+        );
+      }
+
+      selectedUsluge.push({
+        naziv: usluga.naziv,
+        cena: Number(usluga.cena) || 0,
+        tip: usluga.tip || "fiksno",
+        opis: usluga.opis || "",
+      });
+
+      if (usluga.tip === "fiksno") {
+        ukupnaCena += Number(usluga.cena) || 0;
+      }
+
+      if (usluga.tip === "po_osobi") {
+        ukupnaCena += (Number(usluga.cena) || 0) * brojDece;
+      }
+
+      if (usluga.tip === "po_satu") {
+        ukupnaCena += (Number(usluga.cena) || 0) * trajanjeSati;
+      }
+    }
+
+    const created = await Booking.create(
+      [
+        {
+          roditeljId: user?._id || null,
+          playroomId,
+          timeSlotId: null,
+          datum: bookingDate,
+          vremeOd,
+          vremeDo,
+          ukupnaCena,
+          status: BOOKING_STATUS.CEKANJE,
+          napomena: payload.napomena || "",
+          imeRoditelja: payload.imeRoditelja.trim(),
+          prezimeRoditelja: payload.prezimeRoditelja.trim(),
+          emailRoditelja: payload.emailRoditelja.trim().toLowerCase(),
+          telefonRoditelja: payload.telefonRoditelja.trim(),
+          brojDece,
+          izabranaCena: {
+            naziv: cena.naziv,
+            cena: Number(cena.cena) || 0,
+            tip: cena.tip || "fiksno",
+            opis: cena.opis || "",
+          },
+          izabraniPaket: selectedPaket
+            ? {
+                naziv: selectedPaket.naziv,
+                cena: Number(selectedPaket.cena) || 0,
+                opis: selectedPaket.opis || "",
+              }
+            : undefined,
+          izabraneUsluge: selectedUsluge,
+        },
+      ],
+      { session },
+    );
+
+    booking = created[0];
+
+    if (ownSession) {
+      await session.commitTransaction();
+    }
 
     return booking;
   } catch (err) {
@@ -663,4 +1015,10 @@ module.exports = {
   cancelBookingById,
   confirmBookingById,
   getBookingWithRelations,
+  reserveCustomInterval,
+  buildDaySegments,
+  getActiveBookingsForDate,
+  getWorkingHoursForDate,
+  timeToMinutes,
+  minutesToTime,
 };

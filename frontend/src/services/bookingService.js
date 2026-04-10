@@ -13,7 +13,7 @@ export const getTimeSlots = async (playroomId, datum = null) => {
 
     return {
       success: true,
-      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      data: response.data?.data || null,
     };
   } catch (error) {
     console.error("Greška pri dohvatanju termina:", error);
@@ -85,13 +85,18 @@ export const deleteTimeSlot = async (id) => {
 export const createBooking = async (data) => {
   try {
     const payload = {
-      slotId: data.slotId,
+      playroomId: data.playroomId,
+      datum: data.datum,
+      vremeOd: data.vremeOd,
+      vremeDo: data.vremeDo,
+      cenaId: data.cenaId,
+      paketId: data.paketId || null,
+      usluge: Array.isArray(data.usluge) ? data.usluge : [],
       imeRoditelja: data.imeRoditelja || data.ime,
       prezimeRoditelja: data.prezimeRoditelja || data.prezime,
       emailRoditelja: data.emailRoditelja || data.email,
-      telefon: data.telefon,
+      telefonRoditelja: data.telefonRoditelja || data.telefon,
       brojDece: Number(data.brojDece),
-      brojRoditelja: data.brojRoditelja ? Number(data.brojRoditelja) : 0,
       napomena: data.napomena || "",
     };
 
@@ -234,10 +239,10 @@ export const getAllTimeSlotsForOwner = async (playroomId, datum = null) => {
   }
 };
 
-export const manualBookTimeSlot = async (timeSlotId, bookingData) => {
+export const manualBookInterval = async (bookingData) => {
   try {
     const response = await api.post(
-      `/timeslots/${timeSlotId}/manual-book`,
+      "/timeslots/manual-book-interval",
       bookingData,
     );
 
@@ -261,7 +266,13 @@ export const manualBookTimeSlot = async (timeSlotId, bookingData) => {
 export const createGuestBooking = async (data) => {
   try {
     const payload = {
-      slotId: data.slotId,
+      playroomId: data.playroomId,
+      datum: data.datum,
+      vremeOd: data.vremeOd,
+      vremeDo: data.vremeDo,
+      cenaId: data.cenaId,
+      paketId: data.paketId || null,
+      usluge: Array.isArray(data.usluge) ? data.usluge : [],
       ime: data.ime,
       prezime: data.prezime,
       email: data.email,
