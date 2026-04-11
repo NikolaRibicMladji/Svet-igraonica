@@ -469,7 +469,7 @@ const PlayroomDetails = () => {
               {Array.isArray(playroom.dodatneUsluge) &&
                 playroom.dodatneUsluge.length > 0 && (
                   <div className="price-group">
-                    <h3>🎪 Dodatne pogodnosti (opciono)</h3>
+                    <h3>🎪 Dodatne pogodnosti</h3>
                     {playroom.dodatneUsluge.map((usluga, idx) => (
                       <div
                         key={`${usluga.naziv}-${idx}`}

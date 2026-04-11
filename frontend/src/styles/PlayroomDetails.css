@@ -42,17 +42,17 @@
   justify-content: center;
 }
 .profile-image-wrapper {
-  display: inline-block; /* prati sliku */
+  width: 420px; /* 🔥 fiksna širina */
+  height: 420px; /* 🔥 fiksna visina */
   border: 2px solid #eee;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 .profile-image-detail {
-  display: block;
-  max-width: 400px;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover; /* 🔥 ključ za lep crop */
 }
 
 /* ============================================
@@ -572,10 +572,34 @@
 
 .price-item {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid #e2e8f0;
-  gap: 10px;
+}
+.price-item .price-desc {
+  white-space: normal;
+  word-break: break-word;
+}
+.price-item strong,
+.price-type,
+.price-desc {
+  display: inline;
+}
+.price-item span:first-child {
+  min-width: 90px; /* 🔥 poravnava "Deca", "Roditelji" */
+  font-weight: 500;
+}
+
+.price-item strong {
+  color: #ff6b4a;
+  font-weight: 700;
+}
+
+.price-type,
+.price-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 .price-item:last-child {
