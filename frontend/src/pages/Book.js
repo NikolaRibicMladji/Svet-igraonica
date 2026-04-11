@@ -500,6 +500,28 @@ const Book = () => {
     return "fiksna cena";
   };
 
+  const getCountFieldPriceText = (item, fallbackBesplatno = true) => {
+    if (!item) {
+      return fallbackBesplatno ? "besplatno" : "";
+    }
+
+    const cena = Number(item.cena) || 0;
+
+    if (item.tip === "po_osobi") {
+      return `${cena} RSD po osobi`;
+    }
+
+    if (item.tip === "po_satu") {
+      return `${cena} RSD po satu`;
+    }
+
+    if (item.tip === "fiksno") {
+      return `${cena} RSD`;
+    }
+
+    return `${cena} RSD`;
+  };
+
   if (loading) {
     return <div className="container loading">Učitavanje...</div>;
   }
@@ -697,7 +719,12 @@ const Book = () => {
 
                 <div className="form-row count-row">
                   <div className="form-group">
-                    <label className="count-label">Broj dece</label>
+                    <label className="count-label">
+                      Broj dece{" "}
+                      <span className="inline-bracket-text">
+                        ({getCountFieldPriceText(cenaDeteObj, true)})
+                      </span>
+                    </label>
                     <input
                       className="count-input"
                       type="text"
@@ -715,7 +742,12 @@ const Book = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="count-label">Broj roditelja</label>
+                    <label className="count-label">
+                      Broj roditelja{" "}
+                      <span className="inline-bracket-text">
+                        ({getCountFieldPriceText(cenaRoditeljObj, true)})
+                      </span>
+                    </label>
                     <input
                       className="count-input"
                       type="text"
@@ -771,7 +803,8 @@ const Book = () => {
                   playroom.paketi.length > 0 && (
                     <div className="form-group">
                       <label className="booking-section-title">
-                        Izaberi paket (opciono)
+                        Izaberi paket{" "}
+                        <span className="inline-bracket-text">(opciono)</span>
                       </label>
 
                       <div className="booking-options-list booking-options-list--flat">
@@ -779,7 +812,10 @@ const Book = () => {
                           <div key={p._id} className="option-card">
                             <label className="option-check-row">
                               <span>
-                                {p.naziv} - {p.cena} RSD ({getPricingLabel(p)})
+                                {p.naziv} - {p.cena} RSD{" "}
+                                <span className="inline-bracket-text">
+                                  ({getPricingLabel(p)})
+                                </span>
                               </span>
                               <input
                                 type="checkbox"
@@ -803,7 +839,8 @@ const Book = () => {
                   playroom.dodatneUsluge.length > 0 && (
                     <div className="form-group">
                       <label className="booking-section-title">
-                        Dodatne usluge (opciono)
+                        Dodatne usluge{" "}
+                        <span className="inline-bracket-text">(opciono)</span>
                       </label>
 
                       <div className="booking-options-list booking-options-list--flat">
@@ -811,7 +848,10 @@ const Book = () => {
                           <div key={u._id} className="option-card">
                             <label className="option-check-row">
                               <span>
-                                {u.naziv} - {u.cena} RSD ({getPricingLabel(u)})
+                                {u.naziv} - {u.cena} RSD{" "}
+                                <span className="inline-bracket-text">
+                                  ({getPricingLabel(u)})
+                                </span>
                               </span>
                               <input
                                 type="checkbox"

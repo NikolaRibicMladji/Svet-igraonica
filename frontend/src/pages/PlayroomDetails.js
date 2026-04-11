@@ -116,6 +116,28 @@ const PlayroomDetails = () => {
   const ratingValue = Number(playroom.rating || 0);
   const filledStars = Math.max(0, Math.min(5, Math.floor(ratingValue)));
 
+  const cene = Array.isArray(playroom.cene) ? playroom.cene : [];
+
+  const cenaDete = cene.find(
+    (c) => String(c.naziv || "").toLowerCase() === "dete",
+  );
+
+  const cenaRoditelj = cene.find(
+    (c) => String(c.naziv || "").toLowerCase() === "roditelj",
+  );
+
+  const ostaleCene = cene.filter((c) => {
+    const naziv = String(c.naziv || "").toLowerCase();
+    return naziv !== "dete" && naziv !== "roditelj";
+  });
+
+  const getCenaTipLabel = (tip) => {
+    if (tip === "po_osobi") return "po osobi";
+    if (tip === "po_satu") return "po satu";
+    if (tip === "fiksno") return "fiksno";
+    return "";
+  };
+
   return (
     <div className="container playroom-details">
       <button
@@ -364,22 +386,60 @@ const PlayroomDetails = () => {
               <div className="price-group">
                 <h3>💰 Cene</h3>
 
-                {Array.isArray(playroom.cene) &&
-                  playroom.cene.map((cena, idx) => (
-                    <div key={`${cena.naziv}-${idx}`} className="price-item">
-                      <span>{cena.naziv}:</span>
-                      <strong>{cena.cena} RSD</strong>
-                      {cena.tip === "po_osobi" && (
-                        <span className="price-type">(po osobi)</span>
-                      )}
-                      {cena.tip === "po_satu" && (
-                        <span className="price-type">(po satu)</span>
-                      )}
-                      {cena.opis && (
-                        <span className="price-desc">({cena.opis})</span>
-                      )}
-                    </div>
-                  ))}
+                {cenaDete ? (
+                  <div className="price-item">
+                    <span>Deca:</span>
+                    <strong>{cenaDete.cena} RSD</strong>
+                    {getCenaTipLabel(cenaDete.tip) && (
+                      <span className="price-type">
+                        ({getCenaTipLabel(cenaDete.tip)})
+                      </span>
+                    )}
+                    {cenaDete.opis && (
+                      <span className="price-desc">({cenaDete.opis})</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="price-item">
+                    <span>Deca:</span>
+                    <strong>besplatno</strong>
+                  </div>
+                )}
+
+                {cenaRoditelj ? (
+                  <div className="price-item">
+                    <span>Roditelji:</span>
+                    <strong>{cenaRoditelj.cena} RSD</strong>
+                    {getCenaTipLabel(cenaRoditelj.tip) && (
+                      <span className="price-type">
+                        ({getCenaTipLabel(cenaRoditelj.tip)})
+                      </span>
+                    )}
+                    {cenaRoditelj.opis && (
+                      <span className="price-desc">({cenaRoditelj.opis})</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="price-item">
+                    <span>Roditelji:</span>
+                    <strong>besplatno</strong>
+                  </div>
+                )}
+
+                {ostaleCene.map((cena, idx) => (
+                  <div key={`${cena.naziv}-${idx}`} className="price-item">
+                    <span>{cena.naziv}:</span>
+                    <strong>{cena.cena} RSD</strong>
+                    {getCenaTipLabel(cena.tip) && (
+                      <span className="price-type">
+                        ({getCenaTipLabel(cena.tip)})
+                      </span>
+                    )}
+                    {cena.opis && (
+                      <span className="price-desc">({cena.opis})</span>
+                    )}
+                  </div>
+                ))}
               </div>
 
               {Array.isArray(playroom.paketi) && playroom.paketi.length > 0 && (

@@ -162,6 +162,13 @@
   font-size: 14px;
   color: #64748b; /* neutral siva */
 }
+.inline-bracket-text {
+  font-size: 11px;
+  color: #ff6b4a;
+  font-weight: 500;
+  margin-left: 6px;
+  display: inline;
+}
 
 /* =========================================
    FORM
@@ -579,6 +586,7 @@
 .count-label {
   display: inline-block;
   margin-bottom: 8px;
+  line-height: 1.4;
 }
 
 /* =========================================
