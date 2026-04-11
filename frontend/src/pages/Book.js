@@ -24,8 +24,8 @@ const Book = () => {
   const [selectedCenaId, setSelectedCenaId] = useState("");
   const [selectedPaketId, setSelectedPaketId] = useState("");
   const [selectedUslugeIds, setSelectedUslugeIds] = useState([]);
-  const [brojDece, setBrojDece] = useState(0);
-  const [brojRoditelja, setBrojRoditelja] = useState(0);
+  const [brojDece, setBrojDece] = useState("");
+  const [brojRoditelja, setBrojRoditelja] = useState("");
   const [kolicineCena, setKolicineCena] = useState({});
   const [kolicinePaketa, setKolicinePaketa] = useState({});
   const [kolicineUsluga, setKolicineUsluga] = useState({});
@@ -230,35 +230,34 @@ const Book = () => {
     }
 
     if (selectedPaket) {
-      const kolicinaPaketa = Number(kolicinePaketa[selectedPaket._id]) || 0;
-
       if (selectedPaket.tip === "fiksno" || !selectedPaket.tip) {
         total += Number(selectedPaket.cena) || 0;
       }
 
       if (selectedPaket.tip === "po_osobi") {
-        total += (Number(selectedPaket.cena) || 0) * kolicinaPaketa;
+        total +=
+          (Number(selectedPaket.cena) || 0) *
+          ((Number(brojDece) || 0) + (Number(brojRoditelja) || 0));
       }
 
       if (selectedPaket.tip === "po_satu") {
-        total +=
-          (Number(selectedPaket.cena) || 0) * kolicinaPaketa * trajanjeSati;
+        total += (Number(selectedPaket.cena) || 0) * getSlotDurationInHours();
       }
     }
 
     selectedUsluge.forEach((u) => {
-      const kolicinaUsluge = Number(kolicineUsluga[u._id]) || 0;
-
       if (u.tip === "fiksno") {
         total += Number(u.cena) || 0;
       }
 
       if (u.tip === "po_osobi") {
-        total += (Number(u.cena) || 0) * kolicinaUsluge;
+        total +=
+          (Number(u.cena) || 0) *
+          ((Number(brojDece) || 0) + (Number(brojRoditelja) || 0));
       }
 
       if (u.tip === "po_satu") {
-        total += (Number(u.cena) || 0) * kolicinaUsluge * trajanjeSati;
+        total += (Number(u.cena) || 0) * trajanjeSati;
       }
     });
 
@@ -495,6 +494,20 @@ const Book = () => {
     );
   }
 
+  const cenaDeteObj = playroom?.cene?.find(
+    (c) => String(c.naziv).toLowerCase() === "dete",
+  );
+
+  const cenaRoditeljObj = playroom?.cene?.find(
+    (c) => String(c.naziv).toLowerCase() === "roditelj",
+  );
+
+  const cenaDete = Number(cenaDeteObj?.cena) || 0;
+  const cenaRoditelj = Number(cenaRoditeljObj?.cena) || 0;
+
+  const tipDete = cenaDeteObj?.tip || "fiksno";
+  const tipRoditelj = cenaRoditeljObj?.tip || "fiksno";
+
   return (
     <div className="container book-page" ref={topRef}>
       <button
@@ -625,42 +638,38 @@ const Book = () => {
                 </div>
 
                 <div className="form-row">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Broj dece *</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={brojDece}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^\d*$/.test(value)) {
-                            setBrojDece(value === "" ? 0 : Number(value));
-                          }
-                        }}
-                      />
-                    </div>
+                  <div className="form-group">
+                    <label className="count-label">Broj dece *</label>
+                    <input
+                      className="count-input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={brojDece}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*$/.test(value)) {
+                          setBrojDece(value);
+                        }
+                      }}
+                    />
+                  </div>
 
-                    <div className="form-group">
-                      <label>Broj roditelja</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={brojRoditelja}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^\d*$/.test(value)) {
-                            setBrojRoditelja(value === "" ? 0 : Number(value));
-                          }
-                        }}
-                      />
-                    </div>
+                  <div className="form-group">
+                    <label className="count-label">Broj roditelja</label>
+                    <input
+                      className="count-input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={brojRoditelja}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*$/.test(value)) {
+                          setBrojRoditelja(value);
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -701,12 +710,17 @@ const Book = () => {
                 {Array.isArray(playroom.paketi) &&
                   playroom.paketi.length > 0 && (
                     <div className="form-group">
-                      <label>Izaberi paket (opciono)</label>
+                      <label className="booking-section-title">
+                        Izaberi paket (opciono)
+                      </label>
 
                       <div className="booking-options-list booking-options-list--flat">
                         {playroom.paketi.map((p) => (
                           <div key={p._id} className="option-card">
                             <label className="option-check-row">
+                              <span>
+                                {p.naziv} - {p.cena} RSD ({getPricingLabel(p)})
+                              </span>
                               <input
                                 type="checkbox"
                                 checked={selectedPaketId === String(p._id)}
@@ -715,32 +729,10 @@ const Book = () => {
                                     setSelectedPaketId(String(p._id));
                                   } else {
                                     setSelectedPaketId("");
-                                    setKolicinePaketa({});
                                   }
                                 }}
                               />
-                              <span>
-                                {p.naziv} - {p.cena} RSD ({getPricingLabel(p)})
-                              </span>
                             </label>
-
-                            {selectedPaketId === String(p._id) &&
-                              p.tip !== "fiksno" && (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  placeholder="Količina"
-                                  value={kolicinePaketa[p._id] || 0}
-                                  onChange={(e) =>
-                                    handleKolicinaPaketaChange(
-                                      p._id,
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              )}
                           </div>
                         ))}
                       </div>
@@ -750,12 +742,17 @@ const Book = () => {
                 {Array.isArray(playroom.dodatneUsluge) &&
                   playroom.dodatneUsluge.length > 0 && (
                     <div className="form-group">
-                      <label>Dodatne usluge (opciono)</label>
+                      <label className="booking-section-title">
+                        Dodatne usluge (opciono)
+                      </label>
 
                       <div className="booking-options-list booking-options-list--flat">
                         {playroom.dodatneUsluge.map((u) => (
                           <div key={u._id} className="option-card">
                             <label className="option-check-row">
+                              <span>
+                                {u.naziv} - {u.cena} RSD ({getPricingLabel(u)})
+                              </span>
                               <input
                                 type="checkbox"
                                 checked={selectedUslugeIds.includes(
@@ -771,35 +768,10 @@ const Book = () => {
                                     setSelectedUslugeIds((prev) =>
                                       prev.filter((id) => id !== String(u._id)),
                                     );
-                                    setKolicineUsluga((prev) => ({
-                                      ...prev,
-                                      [u._id]: 0,
-                                    }));
                                   }
                                 }}
                               />
-                              <span>
-                                {u.naziv} - {u.cena} RSD ({getPricingLabel(u)})
-                              </span>
                             </label>
-
-                            {selectedUslugeIds.includes(String(u._id)) &&
-                              u.tip !== "fiksno" && (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  placeholder="Količina"
-                                  value={kolicineUsluga[u._id] || 0}
-                                  onChange={(e) =>
-                                    handleKolicinaUslugeChange(
-                                      u._id,
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              )}
                           </div>
                         ))}
                       </div>
@@ -919,7 +891,45 @@ const Book = () => {
 
                 <div className="order-summary">
                   <h4>🛒 Pregled rezervacije</h4>
+                  {/* DECA */}
+                  {(Number(brojDece) || 0) > 0 && cenaDete > 0 && (
+                    <div className="summary-item">
+                      <span>Deca</span>
+                      <span>
+                        {tipDete === "po_satu"
+                          ? `${cenaDete} × ${Number(brojDece) || 0} × ${getSlotDurationInHours()}h = ${
+                              cenaDete *
+                              (Number(brojDece) || 0) *
+                              getSlotDurationInHours()
+                            } RSD`
+                          : tipDete === "po_osobi"
+                            ? `${cenaDete} × ${Number(brojDece) || 0} = ${
+                                cenaDete * (Number(brojDece) || 0)
+                              } RSD`
+                            : `${cenaDete} RSD`}
+                      </span>
+                    </div>
+                  )}
 
+                  {/* RODITELJI */}
+                  {(Number(brojRoditelja) || 0) > 0 && cenaRoditelj > 0 && (
+                    <div className="summary-item">
+                      <span>Roditelji</span>
+                      <span>
+                        {tipRoditelj === "po_satu"
+                          ? `${cenaRoditelj} × ${Number(brojRoditelja) || 0} × ${getSlotDurationInHours()}h = ${
+                              cenaRoditelj *
+                              (Number(brojRoditelja) || 0) *
+                              getSlotDurationInHours()
+                            } RSD`
+                          : tipRoditelj === "po_osobi"
+                            ? `${cenaRoditelj} × ${Number(brojRoditelja) || 0} = ${
+                                cenaRoditelj * (Number(brojRoditelja) || 0)
+                              } RSD`
+                            : `${cenaRoditelj} RSD`}
+                      </span>
+                    </div>
+                  )}
                   {playroom.cene
                     .filter((c) => {
                       const naziv = String(c.naziv || "").toLowerCase();
@@ -948,21 +958,20 @@ const Book = () => {
                     ))}
                   {selectedPaket && (
                     <div className="summary-item">
-                      <span>
-                        Paket: {selectedPaket.naziv} (
-                        {getPricingLabel(selectedPaket)})
-                      </span>
+                      <span>{selectedPaket.naziv}</span>
                       <span>
                         {selectedPaket.tip === "po_osobi"
-                          ? `${selectedPaket.cena} × ${kolicinePaketa[selectedPaket._id] || 0} = ${
+                          ? `${selectedPaket.cena} RSD × ${
+                              (Number(brojDece) || 0) +
+                              (Number(brojRoditelja) || 0)
+                            } = ${
                               (Number(selectedPaket.cena) || 0) *
-                              (Number(kolicinePaketa[selectedPaket._id]) || 0)
+                              ((Number(brojDece) || 0) +
+                                (Number(brojRoditelja) || 0))
                             } RSD`
                           : selectedPaket.tip === "po_satu"
-                            ? `${selectedPaket.cena} × ${kolicinePaketa[selectedPaket._id] || 0} × ${getSlotDurationInHours()}h = ${
+                            ? `${selectedPaket.cena} RSD × ${getSlotDurationInHours()}h = ${
                                 (Number(selectedPaket.cena) || 0) *
-                                (Number(kolicinePaketa[selectedPaket._id]) ||
-                                  0) *
                                 getSlotDurationInHours()
                               } RSD`
                             : `${selectedPaket.cena} RSD`}
@@ -971,20 +980,20 @@ const Book = () => {
                   )}
                   {selectedUsluge.map((u) => (
                     <div className="summary-item" key={u._id}>
-                      <span>
-                        Usluga: {u.naziv} ({getPricingLabel(u)})
-                      </span>
+                      <span>{u.naziv}</span>
                       <span>
                         {u.tip === "po_osobi"
-                          ? `${u.cena} × ${kolicineUsluga[u._id] || 0} = ${
+                          ? `${u.cena} RSD × ${
+                              (Number(brojDece) || 0) +
+                              (Number(brojRoditelja) || 0)
+                            } = ${
                               (Number(u.cena) || 0) *
-                              (Number(kolicineUsluga[u._id]) || 0)
+                              ((Number(brojDece) || 0) +
+                                (Number(brojRoditelja) || 0))
                             } RSD`
                           : u.tip === "po_satu"
-                            ? `${u.cena} × ${kolicineUsluga[u._id] || 0} × ${getSlotDurationInHours()}h = ${
-                                (Number(u.cena) || 0) *
-                                (Number(kolicineUsluga[u._id]) || 0) *
-                                getSlotDurationInHours()
+                            ? `${u.cena} RSD × ${getSlotDurationInHours()}h = ${
+                                (Number(u.cena) || 0) * getSlotDurationInHours()
                               } RSD`
                             : `${u.cena} RSD`}
                       </span>

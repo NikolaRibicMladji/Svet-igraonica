@@ -199,6 +199,64 @@
   outline: none;
 }
 
+.option-card {
+  border: 1px solid #bbf7d0; /* 🔥 isti border kao besplatne pogodnosti */
+  background: #f0fafd; /* 🔥 isti background */
+  border-radius: 16px;
+  padding: 14px 16px;
+  min-height: 56px;
+  position: relative;
+}
+.option-card:hover {
+  border-color: #86efac;
+  background: #dcfce7;
+}
+.option-card:has(input:checked) {
+  border-color: #22c55e;
+  background: #dcfce7;
+}
+
+.option-check-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.option-check-row span {
+  flex: 1;
+  line-height: 1.2;
+}
+
+.option-check-row input[type="checkbox"] {
+  position: absolute;
+
+  right: 16px; /* 👉 pomera levo/desno */
+  top: 50%; /* 👉 vertikalna pozicija */
+
+  transform: translateY(-50%); /* centriranje */
+
+  width: 16px;
+  height: 16px;
+
+  margin: 0;
+}
+
+.option-check-row input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.booking-options-list label {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 /* GRID */
 
 .form-row {
@@ -222,30 +280,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
-}
-
-.option-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 14px 16px;
-
-  display: flex;
-  align-items: center; /* 🔥 OVO CENTRIRA VERTIKALNO */
-  justify-content: space-between;
-  min-height: 56px;
-}
-.option-check-row {
-  display: flex;
-  align-items: center;
-  gap: 12px; /* razmak između teksta i checkboxa */
-  width: 100%;
-}
-.option-check-row input[type="checkbox"] {
-  margin-left: auto; /* 🔥 OVO GA GURA SKROZ DESNO */
-  margin-right: 4px;
-}
-.option-check-row span {
-  display: block;
 }
 
 .option-card:hover {
@@ -383,25 +417,6 @@
   gap: 10px;
   margin-top: 10px;
 }
-.booking-options-list label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.booking-options-list label:hover {
-  border-color: transparent;
-}
-
-.option-check-row input[type="checkbox"] {
-  margin: 0;
-  align-self: center; /* 🔥 osigurava centriranje */
-}
 
 .form-group select {
   width: 100%;
@@ -481,6 +496,38 @@
 .option-card-quantity-info {
   font-size: 14px;
   color: #64748b;
+}
+.booking-form .booking-section-title {
+  color: #ff6b4a;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.booking-form .count-input {
+  border: 2px solid #dadbda; /* 🔥 isti border */
+  background: #eeeded; /* 🔥 ista pozadina */
+}
+.booking-form .count-input:focus {
+  border-color: #dbdbdb;
+  background: #ffffff;
+  outline: none;
+}
+.booking-form .count-label {
+  color: #ff6b4a; /* 🔥 ista boja kao dodatne usluge */
+  font-weight: 700;
+}
+.booking-form .user-data-section label {
+  color: #ff6b4a;
+  font-weight: 600;
+}
+
+.booking-form .user-data-section .user-info-text {
+  color: #ff6b4a;
+}
+
+.booking-form .user-data-section input,
+.booking-form .user-data-section textarea {
+  color: #ff6b4a;
 }
 
 /* =========================================
