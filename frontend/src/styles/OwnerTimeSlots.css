@@ -3,7 +3,7 @@
 ============================================ */
 
 .owner-slots-page {
-  padding: 40px 0;
+  padding: 40px 24px;
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
@@ -358,7 +358,7 @@
 
 @media (max-width: 768px) {
   .owner-slots-page {
-    padding: 24px 0;
+    padding: 24px 16px;
   }
 
   .page-header h1 {

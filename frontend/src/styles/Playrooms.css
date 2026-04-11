@@ -2,11 +2,13 @@
    GLAVNI KONTEJNER
 ============================================ */
 .playrooms-page {
-  padding: 40px 0;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 26px;
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
-
 /* ============================================
    HEADER
 ============================================ */
@@ -352,5 +354,8 @@
 
   .card-buttons {
     flex-direction: column;
+  }
+  .playrooms-page {
+    padding: 24px 16px;
   }
 }

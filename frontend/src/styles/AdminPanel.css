@@ -1,7 +1,7 @@
 /* ADMIN PANEL */
 
 .admin-panel {
-  padding: 40px 0;
+  padding: 40px 24px;
 }
 
 .admin-panel h1 {
@@ -118,7 +118,7 @@
 
 @media (max-width: 480px) {
   .admin-panel {
-    padding: 20px 0;
+    padding: 20px 16px;
   }
 
   .admin-panel h1 {
